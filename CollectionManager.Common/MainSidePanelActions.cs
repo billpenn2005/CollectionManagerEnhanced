@@ -25,4 +25,5 @@ public enum MainSidePanelActions
     SyntaxHelp,
     Discord,
     Github,
+    MergeExportOsz,
 }

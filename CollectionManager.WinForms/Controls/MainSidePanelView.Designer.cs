@@ -41,6 +41,7 @@
             listingToolStripMenuItem1 = new System.Windows.Forms.ToolStripMenuItem();
             Menu_listAllCollections = new System.Windows.Forms.ToolStripMenuItem();
             Menu_listMissingMaps = new System.Windows.Forms.ToolStripMenuItem();
+            Menu_mergeExportOsz = new System.Windows.Forms.ToolStripMenuItem();
             Menu_unloadCollections = new System.Windows.Forms.ToolStripMenuItem();
             onlineToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             Menu_mapDownloads = new System.Windows.Forms.ToolStripMenuItem();
@@ -63,6 +64,7 @@
             Menu_github = new System.Windows.Forms.ToolStripMenuItem();
             toolStripSeparator2 = new System.Windows.Forms.ToolStripSeparator();
             toolStripSeparator3 = new System.Windows.Forms.ToolStripSeparator();
+            toolStripSeparator4 = new System.Windows.Forms.ToolStripSeparator();
             menuStrip1.SuspendLayout();
             SuspendLayout();
             // 
@@ -78,7 +80,7 @@
             // 
             // fileToolStripMenuItem
             // 
-            fileToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] { MenuItem_Opennn, saveToolStripMenuItem, listingToolStripMenuItem1, Menu_unloadCollections });
+            fileToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] { MenuItem_Opennn, saveToolStripMenuItem, listingToolStripMenuItem1, toolStripSeparator4, Menu_mergeExportOsz, Menu_unloadCollections });
             fileToolStripMenuItem.Name = "fileToolStripMenuItem";
             fileToolStripMenuItem.Size = new System.Drawing.Size(37, 20);
             fileToolStripMenuItem.Text = "File";
@@ -151,6 +153,12 @@
             Menu_listMissingMaps.Name = "Menu_listMissingMaps";
             Menu_listMissingMaps.Size = new System.Drawing.Size(168, 22);
             Menu_listMissingMaps.Text = "List missing maps";
+            // 
+            // Menu_mergeExportOsz
+            // 
+            Menu_mergeExportOsz.Name = "Menu_mergeExportOsz";
+            Menu_mergeExportOsz.Size = new System.Drawing.Size(180, 22);
+            Menu_mergeExportOsz.Text = "Export merged osz...";
             // 
             // Menu_unloadCollections
             // 
@@ -288,6 +296,11 @@
             toolStripSeparator3.Name = "toolStripSeparator3";
             toolStripSeparator3.Size = new System.Drawing.Size(217, 6);
             // 
+            // toolStripSeparator4
+            // 
+            toolStripSeparator4.Name = "toolStripSeparator4";
+            toolStripSeparator4.Size = new System.Drawing.Size(177, 6);
+            // 
             // MainSidePanelView
             // 
             AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
@@ -339,5 +352,7 @@
         private System.Windows.Forms.ToolStripMenuItem Menu_github;
         private System.Windows.Forms.ToolStripSeparator toolStripSeparator3;
         private System.Windows.Forms.ToolStripSeparator toolStripSeparator2;
+        private System.Windows.Forms.ToolStripMenuItem Menu_mergeExportOsz;
+        private System.Windows.Forms.ToolStripSeparator toolStripSeparator4;
     }
 }

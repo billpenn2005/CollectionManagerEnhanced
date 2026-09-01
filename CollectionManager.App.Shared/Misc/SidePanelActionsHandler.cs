@@ -83,6 +83,7 @@ public class SidePanelActionsHandler : IDisposable
         { MainSidePanelActions.SyntaxHelp, new SyntaxHelpHandler(userDialogs) },
         { MainSidePanelActions.Discord, new DiscordLinkHandler() },
         { MainSidePanelActions.Github, new GithubLinkHandler() },
+        { MainSidePanelActions.MergeExportOsz, new MergedOszExportHandler(userDialogs) },
     };
 
     private async void SidePanelViewOnSidePanelOperationEventHandler(object sender, MainSidePanelActions args, object data = null)

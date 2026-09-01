@@ -41,6 +41,7 @@ public partial class MainSidePanelView : UserControl, IMainSidePanelView, IOnlin
         Menu_collectionsSplit.Click += (_, _) => SidePanelOperation?.Invoke(this, MainSidePanelActions.SaveIndividualCollections);
         Menu_listAllCollections.Click += (_, _) => SidePanelOperation?.Invoke(this, MainSidePanelActions.ListAllBeatmaps);
         Menu_listMissingMaps.Click += (_, _) => SidePanelOperation?.Invoke(this, MainSidePanelActions.ListMissingMaps);
+        Menu_mergeExportOsz.Click += (_, _) => SidePanelOperation?.Invoke(this, MainSidePanelActions.MergeExportOsz);
         Menu_beatmapListing.Click += (_, _) => SidePanelOperation?.Invoke(this, MainSidePanelActions.ShowBeatmapListing);
         Menu_mapDownloads.Click += (_, _) => SidePanelOperation?.Invoke(this, MainSidePanelActions.ShowDownloadManager);
         Menu_downloadAllMissing.Click += (_, _) => SidePanelOperation?.Invoke(this, MainSidePanelActions.DownloadAllMissing);
