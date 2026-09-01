@@ -1,5 +1,6 @@
 namespace CollectionManager.Common.Interfaces.Forms;
 
+using CollectionManager.Common.Interfaces.Controls;
 using CollectionManager.Core.Types;
 using System;
 using System.Collections.Generic;
@@ -15,6 +16,9 @@ public interface IMergedOszExportForm : IForm
     /// <summary>Items currently selected in the export list (placeholder excluded).</summary>
     IReadOnlyList<MergedOszBeatmap> SelectedExportItems { get; }
 
+    /// <summary>Beatmap preview panel (background thumbnail + music control), same control as the main window's Map tab.</summary>
+    ICombinedBeatmapPreviewView CombinedBeatmapPreviewView { get; }
+
     string PackName { get; }
 
     string Creator { get; }
@@ -29,6 +33,9 @@ public interface IMergedOszExportForm : IForm
 
     void SetExportItems(IReadOnlyList<MergedOszBeatmap> items);
 
+    /// <summary>Sets the live bbcode song list preview shown next to the export list.</summary>
+    void SetBbcodeText(string text);
+
     event EventHandler SelectedCollectionChanged;
 
     event EventHandler MoveToExportClicked;
@@ -42,6 +49,9 @@ public interface IMergedOszExportForm : IForm
     event EventHandler<MergedOszRenameRequestEventArgs> RenameRequested;
 
     event EventHandler ExportClicked;
+
+    /// <summary>Raised by the view when the export-list selection changes (drives the beatmap preview).</summary>
+    event EventHandler ExportSelectionChanged;
 
     /// <summary>Raised by the view when a drag&drop adds beatmaps to the export list.</summary>
     event EventHandler<Beatmaps> BeatmapsDroppedToExport;

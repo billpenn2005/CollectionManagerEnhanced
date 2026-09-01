@@ -102,7 +102,7 @@ public sealed class MergedOszExporterTests : IDisposable
     }
 
     [Fact]
-    public void ExportShouldWriteBbcodeSongList()
+    public void ExportShouldNotWriteBbcodeFile()
     {
         CreateBeatmapFolder(1, "Song One", "Creator One", "audio1.mp3", "bg1.jpg", "song1");
         BeatmapExtension songOne = CreateBeatmap(1, "Song One", "Creator One", "audio1.mp3", "bg1.jpg", "song1");
@@ -110,13 +110,26 @@ public sealed class MergedOszExporterTests : IDisposable
         MergedOszExporter exporter = new(_songsDirectory, _saveDirectory);
         _ = exporter.Export([MergedOszBeatmap.CreatePlaceholder(), MergedOszBeatmap.FromBeatmap(songOne)], PackName, PackCreator, "");
 
-        string bbcodePath = Path.Combine(_saveDirectory, "bbcode.txt");
-        Assert.True(File.Exists(bbcodePath));
-        string bbcode = File.ReadAllText(bbcodePath);
+        Assert.False(File.Exists(Path.Combine(_saveDirectory, "bbcode.txt")), "bbcode.txt should no longer be written to disk");
+    }
+
+    [Fact]
+    public void BuildBbcodeShouldCreateSongList()
+    {
+        BeatmapExtension songOne = CreateBeatmap(1, "Song One", "Creator One", "audio1.mp3", "bg1.jpg", "song1");
+        BeatmapExtension songTwo = CreateBeatmap(2, "Song Two", "Creator Two", "audio2.ogg", "bg2.png", "song2");
+
+        string bbcode = MergedOszExporter.BuildBbcode(
+        [
+            MergedOszBeatmap.CreatePlaceholder(),
+            MergedOszBeatmap.FromBeatmap(songOne),
+            MergedOszBeatmap.FromBeatmap(songTwo),
+        ]);
 
         Assert.Contains("[box=map list]", bbcode);
         Assert.Contains("[/box]", bbcode);
         Assert.Contains("https://osu.ppy.sh/beatmapsets/100#mania/200", bbcode);
+        Assert.Contains("https://osu.ppy.sh/beatmapsets/200#mania/400", bbcode);
         // Placeholder should not appear in the song list
         Assert.DoesNotContain("delete", bbcode);
     }

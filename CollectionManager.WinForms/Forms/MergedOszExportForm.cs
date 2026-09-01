@@ -1,5 +1,6 @@
 ﻿namespace GuiComponents.Forms;
 
+using CollectionManager.Common.Interfaces.Controls;
 using CollectionManager.Common.Interfaces.Forms;
 using CollectionManager.Core.Types;
 using CollectionManager.WinForms.Forms;
@@ -47,6 +48,7 @@ public partial class MergedOszExportForm : BaseForm, IMergedOszExportForm
         listView_export.DragLeave += ListView_export_DragLeave;
         listView_export.DragDrop += ListView_export_DragDrop;
         listView_export.DoubleClick += ListView_export_DoubleClick;
+        listView_export.SelectedIndexChanged += (_, _) => ExportSelectionChanged?.Invoke(this, EventArgs.Empty);
     }
 
     public event EventHandler SelectedCollectionChanged;
@@ -56,6 +58,7 @@ public partial class MergedOszExportForm : BaseForm, IMergedOszExportForm
     public event EventHandler MoveDownClicked;
     public event EventHandler<MergedOszRenameRequestEventArgs> RenameRequested;
     public event EventHandler ExportClicked;
+    public event EventHandler ExportSelectionChanged;
     public event EventHandler<Beatmaps> BeatmapsDroppedToExport;
     public event EventHandler<IReadOnlyList<MergedOszBeatmap>> ExportItemsDroppedBack;
     public event EventHandler<MergedOszReorderEventArgs> ReorderRequested;
@@ -70,6 +73,9 @@ public partial class MergedOszExportForm : BaseForm, IMergedOszExportForm
             .Select(item => (MergedOszBeatmap)item.Tag)
             .Where(item => !item.IsPlaceholder)
             .ToList();
+
+    /// <summary>Beatmap preview panel (same control as the main window's Map tab).</summary>
+    public ICombinedBeatmapPreviewView CombinedBeatmapPreviewView => combinedBeatmapPreviewView1;
 
     public string PackName => textBox_packName.Text;
 
@@ -152,6 +158,8 @@ public partial class MergedOszExportForm : BaseForm, IMergedOszExportForm
 
         listView_export.EndUpdate();
     }
+
+    public void SetBbcodeText(string text) => textBox_bbcode.Text = text;
 
     private void BrowseOutputDirectory()
     {

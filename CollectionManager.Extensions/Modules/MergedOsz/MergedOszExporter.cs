@@ -191,9 +191,6 @@ public class MergedOszExporter
                 zip.SaveTo(fileStream);
             }
 
-            statusProgress?.Report("Writing bbcode.txt...");
-            WriteBbcode(Path.Combine(_saveDirectory, "bbcode.txt"), itemsArray);
-
             return failedExports;
         }
         finally
@@ -421,7 +418,11 @@ public class MergedOszExporter
         return true;
     }
 
-    private static void WriteBbcode(string filePath, IEnumerable<MergedOszBeatmap> items)
+    /// <summary>
+    /// Builds the [box=map list] song listing used for forum posts (osupack's bbcode.txt).
+    /// The .osz export itself no longer writes this to disk; the UI shows it as live preview.
+    /// </summary>
+    public static string BuildBbcode(IEnumerable<MergedOszBeatmap> items)
     {
         StringBuilder stringBuilder = new();
         _ = stringBuilder.AppendLine("[box=map list]");
@@ -441,7 +442,7 @@ public class MergedOszExporter
         }
 
         _ = stringBuilder.AppendLine("[/box]");
-        File.WriteAllText(filePath, stringBuilder.ToString(), Encoding.UTF8);
+        return stringBuilder.ToString();
     }
 
     private static string SanitizeFileName(string name)

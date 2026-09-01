@@ -1,6 +1,9 @@
 namespace CollectionManager.App.Shared.Presenters.Forms;
 
+using CollectionManager.App.Shared.Models;
+using CollectionManager.App.Shared.Models.Controls;
 using CollectionManager.App.Shared.Models.Forms;
+using CollectionManager.App.Shared.Presenters.Controls;
 using CollectionManager.Common;
 using CollectionManager.Common.Interfaces;
 using CollectionManager.Common.Interfaces.Forms;
@@ -21,6 +24,7 @@ public sealed class MergedOszExportFormPresenter
     private readonly IMergedOszExportForm _view;
     private readonly MergedOszExportModel _model;
     private readonly IUserDialogs _userDialogs;
+    private readonly CombinedBeatmapPreviewModel _combinedBeatmapPreviewModel;
 
     public MergedOszExportFormPresenter(IMergedOszExportForm view, MergedOszExportModel model, IUserDialogs userDialogs)
     {
@@ -38,9 +42,14 @@ public sealed class MergedOszExportFormPresenter
         _view.MoveDownClicked += (_, _) => MoveSelected(1);
         _view.RenameRequested += (_, args) => Rename(args);
         _view.ExportClicked += async (_, _) => await ExportAsync();
+        _view.ExportSelectionChanged += (_, _) => UpdatePreview();
         _view.BeatmapsDroppedToExport += (_, beatmaps) => AddBeatmaps(beatmaps);
         _view.ExportItemsDroppedBack += (_, items) => RemoveItems(items);
         _view.ReorderRequested += (_, args) => Reorder(args);
+
+        _combinedBeatmapPreviewModel = new CombinedBeatmapPreviewModel();
+        _ = new CombinedBeatmapPreviewPresenter(view.CombinedBeatmapPreviewView, _combinedBeatmapPreviewModel);
+        RefreshBbcode();
     }
 
     private void OnSelectedCollectionChanged()
@@ -93,6 +102,7 @@ public sealed class MergedOszExportFormPresenter
         if (anyAdded)
         {
             _view.SetExportItems(_model.ExportItems);
+            RefreshBbcode();
         }
     }
 
@@ -123,6 +133,7 @@ public sealed class MergedOszExportFormPresenter
         if (anyRemoved)
         {
             _view.SetExportItems(_model.ExportItems);
+            RefreshBbcode();
         }
     }
 
@@ -145,6 +156,7 @@ public sealed class MergedOszExportFormPresenter
 
         (_model.ExportItems[index], _model.ExportItems[index + direction]) = (_model.ExportItems[index + direction], _model.ExportItems[index]);
         _view.SetExportItems(_model.ExportItems);
+        RefreshBbcode();
     }
 
     private void Reorder(MergedOszReorderEventArgs args)
@@ -169,6 +181,7 @@ public sealed class MergedOszExportFormPresenter
         items.Add(placeholder);
         items.AddRange(remaining);
         _view.SetExportItems(items);
+        RefreshBbcode();
     }
 
     private void Rename(MergedOszRenameRequestEventArgs args)
@@ -180,6 +193,7 @@ public sealed class MergedOszExportFormPresenter
 
         _model.ExportItems[args.Index].DisplayName = string.IsNullOrWhiteSpace(args.NewName) ? null : args.NewName.Trim();
         _view.SetExportItems(_model.ExportItems);
+        RefreshBbcode();
     }
 
     private async Task ExportAsync()
@@ -245,7 +259,7 @@ public sealed class MergedOszExportFormPresenter
 
             if (failedExports.Count is 0)
             {
-                await _userDialogs.OkMessageBoxAsync($"Exported {totalCount} beatmaps.{Environment.NewLine}{Environment.NewLine}.osz file:{Environment.NewLine}{oszPath}{Environment.NewLine}{Environment.NewLine}Song list (bbcode):{Environment.NewLine}{Path.Combine(outputDirectory, "bbcode.txt")}", "Export merged osz");
+                await _userDialogs.OkMessageBoxAsync($"Exported {totalCount} beatmaps.{Environment.NewLine}{Environment.NewLine}.osz file:{Environment.NewLine}{oszPath}{Environment.NewLine}{Environment.NewLine}The bbcode song list is shown in the export window and was not written to disk.", "Export merged osz");
             }
             else
             {
@@ -265,6 +279,13 @@ public sealed class MergedOszExportFormPresenter
             progressForm.Close();
         }
     }
+
+    private void UpdatePreview()
+    {
+        _combinedBeatmapPreviewModel.SetBeatmap(_view.SelectedExportItems?.FirstOrDefault()?.Beatmap);
+    }
+
+    private void RefreshBbcode() => _view.SetBbcodeText(MergedOszExporter.BuildBbcode(_model.ExportItems));
 
     private static string SanitizeFileName(string name)
     {

@@ -33,6 +33,12 @@
             label_collection = new System.Windows.Forms.Label();
             comboBox_collection = new System.Windows.Forms.ComboBox();
             splitContainer1 = new System.Windows.Forms.SplitContainer();
+            splitContainer2 = new System.Windows.Forms.SplitContainer();
+            tabControlEx1 = new CollectionManager.WinForms.Controls.TabControlEx();
+            tabPage_preview = new System.Windows.Forms.TabPage();
+            combinedBeatmapPreviewView1 = new GuiComponents.Controls.CombinedBeatmapPreviewView();
+            tabPage_bbcode = new System.Windows.Forms.TabPage();
+            textBox_bbcode = new System.Windows.Forms.TextBox();
             label_source = new System.Windows.Forms.Label();
             listView_source = new System.Windows.Forms.ListView();
             columnHeader_sourceSong = new System.Windows.Forms.ColumnHeader();
@@ -66,6 +72,13 @@
             splitContainer1.Panel1.SuspendLayout();
             splitContainer1.Panel2.SuspendLayout();
             splitContainer1.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)splitContainer2).BeginInit();
+            splitContainer2.Panel1.SuspendLayout();
+            splitContainer2.Panel2.SuspendLayout();
+            splitContainer2.SuspendLayout();
+            tabControlEx1.SuspendLayout();
+            tabPage_preview.SuspendLayout();
+            tabPage_bbcode.SuspendLayout();
             flowLayoutPanel_moveButtons.SuspendLayout();
             groupBox_settings.SuspendLayout();
             flowLayoutPanel_settings.SuspendLayout();
@@ -127,11 +140,9 @@
             // 
             // splitContainer1.Panel2
             // 
-            splitContainer1.Panel2.Controls.Add(listView_export);
-            splitContainer1.Panel2.Controls.Add(flowLayoutPanel_moveButtons);
-            splitContainer1.Panel2.Controls.Add(label_export);
-            splitContainer1.Panel2MinSize = 250;
-            splitContainer1.Size = new System.Drawing.Size(984, 452);
+            splitContainer1.Panel2.Controls.Add(splitContainer2);
+            splitContainer1.Panel2MinSize = 300;
+            splitContainer1.Size = new System.Drawing.Size(1360, 492);
             splitContainer1.SplitterDistance = 470;
             splitContainer1.SplitterWidth = 5;
             splitContainer1.TabIndex = 1;
@@ -182,9 +193,9 @@
             label_export.Location = new System.Drawing.Point(0, 0);
             label_export.Name = "label_export";
             label_export.Padding = new System.Windows.Forms.Padding(3, 2, 3, 2);
-            label_export.Size = new System.Drawing.Size(509, 20);
+            label_export.Size = new System.Drawing.Size(470, 20);
             label_export.TabIndex = 1;
-            label_export.Text = "Export list (double-click name to edit, drag back to remove):";
+            label_export.Text = "Export list (double-click name to edit, drag to reorder):";
             // 
             // flowLayoutPanel_moveButtons
             // 
@@ -197,7 +208,7 @@
             flowLayoutPanel_moveButtons.Location = new System.Drawing.Point(0, 20);
             flowLayoutPanel_moveButtons.Name = "flowLayoutPanel_moveButtons";
             flowLayoutPanel_moveButtons.Padding = new System.Windows.Forms.Padding(4, 6, 4, 6);
-            flowLayoutPanel_moveButtons.Size = new System.Drawing.Size(68, 432);
+            flowLayoutPanel_moveButtons.Size = new System.Drawing.Size(68, 472);
             flowLayoutPanel_moveButtons.TabIndex = 0;
             // 
             // button_add
@@ -250,7 +261,7 @@
             listView_export.Location = new System.Drawing.Point(68, 20);
             listView_export.MultiSelect = true;
             listView_export.Name = "listView_export";
-            listView_export.Size = new System.Drawing.Size(441, 432);
+            listView_export.Size = new System.Drawing.Size(402, 472);
             listView_export.TabIndex = 2;
             listView_export.UseCompatibleStateImageBehavior = false;
             listView_export.View = System.Windows.Forms.View.Details;
@@ -265,13 +276,92 @@
             columnHeader_exportSource.Text = "Source beatmap";
             columnHeader_exportSource.Width = 180;
             // 
+            // splitContainer2
+            // 
+            splitContainer2.Dock = System.Windows.Forms.DockStyle.Fill;
+            splitContainer2.Location = new System.Drawing.Point(0, 0);
+            splitContainer2.Name = "splitContainer2";
+            // 
+            // splitContainer2.Panel1
+            // 
+            splitContainer2.Panel1.Controls.Add(listView_export);
+            splitContainer2.Panel1.Controls.Add(flowLayoutPanel_moveButtons);
+            splitContainer2.Panel1.Controls.Add(label_export);
+            splitContainer2.Panel1MinSize = 250;
+            // 
+            // splitContainer2.Panel2
+            // 
+            splitContainer2.Panel2.Controls.Add(tabControlEx1);
+            splitContainer2.Panel2MinSize = 320;
+            splitContainer2.Size = new System.Drawing.Size(885, 492);
+            splitContainer2.SplitterDistance = 470;
+            splitContainer2.SplitterWidth = 5;
+            splitContainer2.TabIndex = 0;
+            // 
+            // tabControlEx1
+            // 
+            tabControlEx1.Controls.Add(tabPage_preview);
+            tabControlEx1.Controls.Add(tabPage_bbcode);
+            tabControlEx1.Dock = System.Windows.Forms.DockStyle.Fill;
+            tabControlEx1.Location = new System.Drawing.Point(0, 0);
+            tabControlEx1.Name = "tabControlEx1";
+            tabControlEx1.SelectedIndex = 0;
+            tabControlEx1.Size = new System.Drawing.Size(410, 492);
+            tabControlEx1.TabIndex = 0;
+            // 
+            // tabPage_preview
+            // 
+            tabPage_preview.BackColor = System.Drawing.SystemColors.Control;
+            tabPage_preview.Controls.Add(combinedBeatmapPreviewView1);
+            tabPage_preview.Location = new System.Drawing.Point(0, 22);
+            tabPage_preview.Margin = new System.Windows.Forms.Padding(4, 3, 4, 3);
+            tabPage_preview.Name = "tabPage_preview";
+            tabPage_preview.Padding = new System.Windows.Forms.Padding(4, 3, 4, 3);
+            tabPage_preview.Size = new System.Drawing.Size(402, 462);
+            tabPage_preview.TabIndex = 0;
+            tabPage_preview.Text = "Map";
+            tabPage_preview.UseVisualStyleBackColor = true;
+            // 
+            // combinedBeatmapPreviewView1
+            // 
+            combinedBeatmapPreviewView1.Dock = System.Windows.Forms.DockStyle.Fill;
+            combinedBeatmapPreviewView1.Location = new System.Drawing.Point(4, 3);
+            combinedBeatmapPreviewView1.Name = "combinedBeatmapPreviewView1";
+            combinedBeatmapPreviewView1.Size = new System.Drawing.Size(394, 456);
+            combinedBeatmapPreviewView1.TabIndex = 0;
+            // 
+            // tabPage_bbcode
+            // 
+            tabPage_bbcode.BackColor = System.Drawing.SystemColors.Control;
+            tabPage_bbcode.Controls.Add(textBox_bbcode);
+            tabPage_bbcode.Location = new System.Drawing.Point(0, 22);
+            tabPage_bbcode.Margin = new System.Windows.Forms.Padding(4, 3, 4, 3);
+            tabPage_bbcode.Name = "tabPage_bbcode";
+            tabPage_bbcode.Padding = new System.Windows.Forms.Padding(4, 3, 4, 3);
+            tabPage_bbcode.Size = new System.Drawing.Size(402, 462);
+            tabPage_bbcode.TabIndex = 1;
+            tabPage_bbcode.Text = "Collection text";
+            tabPage_bbcode.UseVisualStyleBackColor = true;
+            // 
+            // textBox_bbcode
+            // 
+            textBox_bbcode.Dock = System.Windows.Forms.DockStyle.Fill;
+            textBox_bbcode.Location = new System.Drawing.Point(4, 3);
+            textBox_bbcode.Multiline = true;
+            textBox_bbcode.Name = "textBox_bbcode";
+            textBox_bbcode.ReadOnly = true;
+            textBox_bbcode.ScrollBars = System.Windows.Forms.ScrollBars.Both;
+            textBox_bbcode.Size = new System.Drawing.Size(394, 456);
+            textBox_bbcode.TabIndex = 0;
+            textBox_bbcode.WordWrap = false;
+            // 
             // groupBox_settings
             // 
             groupBox_settings.Anchor = System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right;
             groupBox_settings.Controls.Add(flowLayoutPanel_settings);
-            groupBox_settings.Location = new System.Drawing.Point(0, 504);
+            groupBox_settings.Location = new System.Drawing.Point(0, 544);
             groupBox_settings.Name = "groupBox_settings";
-            groupBox_settings.Size = new System.Drawing.Size(984, 108);
+            groupBox_settings.Size = new System.Drawing.Size(1360, 108);
             groupBox_settings.TabIndex = 2;
             groupBox_settings.TabStop = false;
             groupBox_settings.Text = "Pack settings";
@@ -382,7 +472,7 @@
             // 
             button_export.Anchor = System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right;
             button_export.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold);
-            button_export.Location = new System.Drawing.Point(872, 618);
+            button_export.Location = new System.Drawing.Point(1248, 658);
             button_export.Name = "button_export";
             button_export.Size = new System.Drawing.Size(100, 30);
             button_export.TabIndex = 3;
@@ -392,7 +482,7 @@
             // button_close
             // 
             button_close.Anchor = System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right;
-            button_close.Location = new System.Drawing.Point(781, 618);
+            button_close.Location = new System.Drawing.Point(1157, 658);
             button_close.Name = "button_close";
             button_close.Size = new System.Drawing.Size(85, 30);
             button_close.TabIndex = 4;
@@ -403,13 +493,13 @@
             // 
             AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
             AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            ClientSize = new System.Drawing.Size(984, 660);
+            ClientSize = new System.Drawing.Size(1360, 700);
             Controls.Add(button_close);
             Controls.Add(button_export);
             Controls.Add(groupBox_settings);
             Controls.Add(splitContainer1);
             Controls.Add(groupBox_collection);
-            MinimumSize = new System.Drawing.Size(820, 560);
+            MinimumSize = new System.Drawing.Size(1000, 600);
             Name = "MergedOszExportForm";
             Text = "Export merged osz";
             groupBox_collection.ResumeLayout(false);
@@ -419,6 +509,13 @@
             splitContainer1.Panel2.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)splitContainer1).EndInit();
             splitContainer1.ResumeLayout(false);
+            splitContainer2.Panel1.ResumeLayout(false);
+            splitContainer2.Panel2.ResumeLayout(false);
+            ((System.ComponentModel.ISupportInitialize)splitContainer2).EndInit();
+            splitContainer2.ResumeLayout(false);
+            tabControlEx1.ResumeLayout(false);
+            tabPage_preview.ResumeLayout(false);
+            tabPage_bbcode.ResumeLayout(false);
             flowLayoutPanel_moveButtons.ResumeLayout(false);
             groupBox_settings.ResumeLayout(false);
             flowLayoutPanel_settings.ResumeLayout(false);
@@ -433,6 +530,12 @@
         private System.Windows.Forms.Label label_collection;
         private System.Windows.Forms.ComboBox comboBox_collection;
         private System.Windows.Forms.SplitContainer splitContainer1;
+        private System.Windows.Forms.SplitContainer splitContainer2;
+        private CollectionManager.WinForms.Controls.TabControlEx tabControlEx1;
+        private System.Windows.Forms.TabPage tabPage_preview;
+        private GuiComponents.Controls.CombinedBeatmapPreviewView combinedBeatmapPreviewView1;
+        private System.Windows.Forms.TabPage tabPage_bbcode;
+        private System.Windows.Forms.TextBox textBox_bbcode;
         private System.Windows.Forms.Label label_source;
         private System.Windows.Forms.ListView listView_source;
         private System.Windows.Forms.ColumnHeader columnHeader_sourceSong;
