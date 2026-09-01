@@ -48,6 +48,9 @@ public interface IMergedOszExportForm : IForm
 
     /// <summary>Raised by the view when a drag&drop removes items from the export list.</summary>
     event EventHandler<IReadOnlyList<MergedOszBeatmap>> ExportItemsDroppedBack;
+
+    /// <summary>Raised by the view when export-list items are drag&dropped to reorder them within the list.</summary>
+    event EventHandler<MergedOszReorderEventArgs> ReorderRequested;
 }
 
 public sealed class MergedOszRenameRequestEventArgs : EventArgs
@@ -61,4 +64,19 @@ public sealed class MergedOszRenameRequestEventArgs : EventArgs
     public int Index { get; }
 
     public string NewName { get; }
+}
+
+public sealed class MergedOszReorderEventArgs : EventArgs
+{
+    public MergedOszReorderEventArgs(IReadOnlyList<MergedOszBeatmap> items, int targetIndex)
+    {
+        Items = items;
+        TargetIndex = targetIndex;
+    }
+
+    /// <summary>The dragged items, in the order they appeared in the list.</summary>
+    public IReadOnlyList<MergedOszBeatmap> Items { get; }
+
+    /// <summary>Position in the full list (placeholder at index 0) where the items should be inserted.</summary>
+    public int TargetIndex { get; }
 }

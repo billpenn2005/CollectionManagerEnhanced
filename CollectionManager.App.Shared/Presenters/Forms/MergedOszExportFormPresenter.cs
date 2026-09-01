@@ -40,6 +40,7 @@ public sealed class MergedOszExportFormPresenter
         _view.ExportClicked += async (_, _) => await ExportAsync();
         _view.BeatmapsDroppedToExport += (_, beatmaps) => AddBeatmaps(beatmaps);
         _view.ExportItemsDroppedBack += (_, items) => RemoveItems(items);
+        _view.ReorderRequested += (_, args) => Reorder(args);
     }
 
     private void OnSelectedCollectionChanged()
@@ -144,6 +145,30 @@ public sealed class MergedOszExportFormPresenter
 
         (_model.ExportItems[index], _model.ExportItems[index + direction]) = (_model.ExportItems[index + direction], _model.ExportItems[index]);
         _view.SetExportItems(_model.ExportItems);
+    }
+
+    private void Reorder(MergedOszReorderEventArgs args)
+    {
+        List<MergedOszBeatmap> items = _model.ExportItems;
+        List<MergedOszBeatmap> moving = args.Items.Where(item => !item.IsPlaceholder).ToList();
+
+        if (moving.Count is 0)
+        {
+            return;
+        }
+
+        MergedOszBeatmap placeholder = items.FirstOrDefault(item => item.IsPlaceholder) ?? items[0];
+        List<MergedOszBeatmap> remaining = items.Where(item => item != placeholder && !moving.Contains(item)).ToList();
+
+        int movedBefore = moving.Count(item => items.IndexOf(item) < args.TargetIndex);
+        int insertAt = Math.Max(0, Math.Min(remaining.Count, args.TargetIndex - 1 - movedBefore));
+
+        remaining.InsertRange(insertAt, moving);
+
+        items.Clear();
+        items.Add(placeholder);
+        items.AddRange(remaining);
+        _view.SetExportItems(items);
     }
 
     private void Rename(MergedOszRenameRequestEventArgs args)

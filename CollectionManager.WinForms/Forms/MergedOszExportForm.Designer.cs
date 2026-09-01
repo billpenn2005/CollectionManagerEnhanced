@@ -348,7 +348,6 @@
             textBox_extraTags.Name = "textBox_extraTags";
             textBox_extraTags.Size = new System.Drawing.Size(300, 23);
             textBox_extraTags.TabIndex = 5;
-            textBox_extraTags.Text = "chordjack practice";
             // 
             // label_outputDirectory
             // 

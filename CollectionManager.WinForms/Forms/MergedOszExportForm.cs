@@ -14,11 +14,19 @@ public partial class MergedOszExportForm : BaseForm, IMergedOszExportForm
     private const string BeatmapsFormat = "CM.SourceBeatmaps";
     private const string ExportItemsFormat = "CM.ExportItems";
 
-    private TextBox _renameTextBox;
+    private TextBox _editTextBox;
 
     public MergedOszExportForm()
     {
         InitializeComponent();
+
+        // InsertionMark (drag&drop reorder indicator) only renders when the ListView has an image list.
+        listView_export.SmallImageList = new ImageList
+        {
+            ImageSize = new Size(1, 1),
+            ColorDepth = ColorDepth.Depth32Bit,
+            TransparentColor = Color.Transparent,
+        };
 
         comboBox_collection.SelectedIndexChanged += (_, _) => SelectedCollectionChanged?.Invoke(this, EventArgs.Empty);
         button_add.Click += (_, _) => MoveToExportClicked?.Invoke(this, EventArgs.Empty);
@@ -32,8 +40,11 @@ public partial class MergedOszExportForm : BaseForm, IMergedOszExportForm
         listView_source.ItemDrag += ListView_source_ItemDrag;
         listView_source.DragEnter += ListView_source_DragEnter;
         listView_source.DragDrop += ListView_source_DragDrop;
+        listView_source.DoubleClick += ListView_source_DoubleClick;
         listView_export.ItemDrag += ListView_export_ItemDrag;
         listView_export.DragEnter += ListView_export_DragEnter;
+        listView_export.DragOver += ListView_export_DragOver;
+        listView_export.DragLeave += ListView_export_DragLeave;
         listView_export.DragDrop += ListView_export_DragDrop;
         listView_export.DoubleClick += ListView_export_DoubleClick;
     }
@@ -47,6 +58,7 @@ public partial class MergedOszExportForm : BaseForm, IMergedOszExportForm
     public event EventHandler ExportClicked;
     public event EventHandler<Beatmaps> BeatmapsDroppedToExport;
     public event EventHandler<IReadOnlyList<MergedOszBeatmap>> ExportItemsDroppedBack;
+    public event EventHandler<MergedOszReorderEventArgs> ReorderRequested;
 
     public IOsuCollection SelectedCollection => (comboBox_collection.SelectedItem as CollectionItem)?.Collection;
 
@@ -182,14 +194,45 @@ public partial class MergedOszExportForm : BaseForm, IMergedOszExportForm
             return;
         }
 
-        _ = listView_export.DoDragDrop(new DataObject(ExportItemsFormat, items), DragDropEffects.Copy);
+        _ = listView_export.DoDragDrop(new DataObject(ExportItemsFormat, items), DragDropEffects.Move);
     }
 
     private void ListView_source_DragEnter(object sender, DragEventArgs e)
         => e.Effect = e.Data.GetDataPresent(ExportItemsFormat) ? DragDropEffects.Copy : DragDropEffects.None;
 
     private void ListView_export_DragEnter(object sender, DragEventArgs e)
-        => e.Effect = e.Data.GetDataPresent(BeatmapsFormat) ? DragDropEffects.Copy : DragDropEffects.None;
+        => e.Effect = e.Data.GetDataPresent(BeatmapsFormat) || e.Data.GetDataPresent(ExportItemsFormat) ? DragDropEffects.Move : DragDropEffects.None;
+
+    private void ListView_export_DragOver(object sender, DragEventArgs e)
+    {
+        bool reorder = e.Data.GetDataPresent(ExportItemsFormat);
+        bool add = e.Data.GetDataPresent(BeatmapsFormat);
+
+        if (!reorder && !add)
+        {
+            e.Effect = DragDropEffects.None;
+            return;
+        }
+
+        e.Effect = reorder ? DragDropEffects.Move : DragDropEffects.Copy;
+
+        if (reorder && listView_export.Items.Count > 0)
+        {
+            Point cursorLocation = listView_export.PointToClient(new Point(e.X, e.Y));
+            int nearest = listView_export.InsertionMark.NearestIndex(cursorLocation);
+            nearest = Math.Max(0, Math.Min(nearest, listView_export.Items.Count - 1));
+
+            ListViewItem targetItem = listView_export.Items[nearest];
+            Rectangle bounds = targetItem.GetBounds(ItemBoundsPortion.Entire);
+            bool appearsAfter = cursorLocation.Y > bounds.Top + bounds.Height / 2;
+
+            listView_export.InsertionMark.Index = nearest;
+            listView_export.InsertionMark.AppearsAfterItem = appearsAfter;
+        }
+    }
+
+    private void ListView_export_DragLeave(object sender, EventArgs e)
+        => listView_export.InsertionMark.Index = -1;
 
     private void ListView_source_DragDrop(object sender, DragEventArgs e)
     {
@@ -205,64 +248,133 @@ public partial class MergedOszExportForm : BaseForm, IMergedOszExportForm
         {
             BeatmapsDroppedToExport?.Invoke(this, new Beatmaps(beatmaps));
         }
+        else if (e.Data.GetDataPresent(ExportItemsFormat) && e.Data.GetData(ExportItemsFormat) is IReadOnlyList<MergedOszBeatmap> items)
+        {
+            int targetIndex = GetDropTargetIndex();
+            listView_export.InsertionMark.Index = -1;
+            ReorderRequested?.Invoke(this, new MergedOszReorderEventArgs(items, targetIndex));
+        }
+    }
+
+    private int GetDropTargetIndex()
+    {
+        int index = listView_export.InsertionMark.Index;
+        int targetIndex = listView_export.InsertionMark.AppearsAfterItem ? index + 1 : index;
+        return Math.Clamp(targetIndex, 1, listView_export.Items.Count);
+    }
+
+    private void ListView_source_DoubleClick(object sender, EventArgs e)
+    {
+        Point cursorLocation = listView_source.PointToClient(Cursor.Position);
+        ListViewHitTestInfo hit = listView_source.HitTest(cursorLocation);
+
+        if (hit.Item is not null)
+        {
+            BeginInlineEdit(hit.Item, GetColumnIndex(listView_source, hit, cursorLocation), readOnly: true);
+        }
     }
 
     private void ListView_export_DoubleClick(object sender, EventArgs e)
     {
         Point cursorLocation = listView_export.PointToClient(Cursor.Position);
-        ListViewItem item = listView_export.GetItemAt(cursorLocation.X, cursorLocation.Y);
-        if (item is not null)
+        ListViewHitTestInfo hit = listView_export.HitTest(cursorLocation);
+
+        if (hit.Item is not null)
         {
-            BeginRename(item);
+            int columnIndex = GetColumnIndex(listView_export, hit, cursorLocation);
+
+            // Only the first (name) column is editable; other columns open a read-only copy box.
+            BeginInlineEdit(hit.Item, columnIndex, readOnly: columnIndex > 0);
         }
     }
 
-    private void BeginRename(ListViewItem item)
+    private static int GetColumnIndex(ListView listView, ListViewHitTestInfo hit, Point point)
     {
-        EndRename(false);
+        if (hit.SubItem is not null)
+        {
+            for (int i = 0; i < hit.Item.SubItems.Count; i++)
+            {
+                if (ReferenceEquals(hit.Item.SubItems[i], hit.SubItem))
+                {
+                    return i;
+                }
+            }
+
+            return 0;
+        }
+
+        // Fallback for clicks on column borders / empty area: locate by X against sub-item bounds.
+        int x = point.X;
+        ListViewItem.ListViewSubItemCollection subItems = hit.Item.SubItems;
+
+        for (int i = 0; i < listView.Columns.Count && i < subItems.Count; i++)
+        {
+            Rectangle bounds = subItems[i].Bounds;
+
+            if (x < bounds.Left)
+            {
+                break;
+            }
+
+            if (x <= bounds.Right)
+            {
+                return i;
+            }
+        }
+
+        return 0;
+    }
+
+    private void BeginInlineEdit(ListViewItem item, int subItemIndex, bool readOnly)
+    {
+        EndInlineEdit(false);
+
+        subItemIndex = Math.Max(0, Math.Min(subItemIndex, item.SubItems.Count - 1));
 
         Rectangle itemBounds = item.GetBounds(ItemBoundsPortion.ItemOnly);
-        Rectangle cellBounds = item.SubItems[0].Bounds;
+        Rectangle cellBounds = item.SubItems[subItemIndex].Bounds;
 
-        _renameTextBox = new TextBox
+        _editTextBox = new TextBox
         {
             Bounds = new Rectangle(cellBounds.X, itemBounds.Y, Math.Max(100, itemBounds.Width), itemBounds.Height),
-            Text = item.Text,
+            Text = item.SubItems[subItemIndex].Text,
             BorderStyle = BorderStyle.FixedSingle,
+            ReadOnly = readOnly,
             Tag = item,
         };
 
-        listView_export.Controls.Add(_renameTextBox);
-        _renameTextBox.BringToFront();
-        _renameTextBox.Focus();
-        _renameTextBox.SelectAll();
+        ListView owner = readOnly ? listView_source : listView_export;
+        owner.Controls.Add(_editTextBox);
+        _editTextBox.BringToFront();
+        _editTextBox.Focus();
+        _editTextBox.SelectAll();
 
-        _renameTextBox.KeyDown += (_, args) =>
+        _editTextBox.KeyDown += (_, args) =>
         {
             if (args.KeyCode == Keys.Enter)
             {
-                EndRename(true);
+                EndInlineEdit(!readOnly);
                 args.SuppressKeyPress = true;
             }
             else if (args.KeyCode == Keys.Escape)
             {
-                EndRename(false);
+                EndInlineEdit(false);
                 args.SuppressKeyPress = true;
             }
         };
 
-        _renameTextBox.LostFocus += (_, _) => EndRename(true);
+        _editTextBox.LostFocus += (_, _) => EndInlineEdit(!readOnly);
     }
 
-    private void EndRename(bool commit)
+    private void EndInlineEdit(bool commit)
     {
-        if (_renameTextBox is null)
+        if (_editTextBox is null)
         {
             return;
         }
 
-        TextBox textBox = _renameTextBox;
-        _renameTextBox = null;
+        TextBox textBox = _editTextBox;
+        _editTextBox = null;
         ListViewItem item = textBox.Tag as ListViewItem;
         string newName = textBox.Text;
         textBox.Dispose();
