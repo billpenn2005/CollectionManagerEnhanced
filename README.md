@@ -2,6 +2,8 @@
 
 An extensive tool for creating, editing, and exporting of osu! collections.
 
+> **Enhanced fork**: this repository ([CollectionManagerEnhanced](https://github.com/billpenn2005/CollectionManagerEnhanced)) is a fork of [Piotrekol/CollectionManager](https://github.com/Piotrekol/CollectionManager) with additional features on top of the original tool (see [Exporting a Merged .osz](#exporting-a-merging-osz-added-in-this-fork)).
+
 ## Download
 
 You can download the latest release of Collection Manager here: [Releases](https://github.com/Piotrekol/CollectionManager/releases/latest). Files to download are in the `Assets` dropdown at the bottom of the release.
@@ -59,6 +61,26 @@ Collection Manager **cannot** open or import these lists back into collections. 
 ### **Saving Maps**
 
 Maps can be exported and packed into .osz files by right clicking on a collection or map and selecting `Export beatmap sets`.
+
+### **Exporting a Merged .osz** *(added in this fork)*
+
+Besides exporting one .osz per mapset, Collection Manager can pack all selected maps into **one single .osz** (a "song pack") where every difficulty is flattened into a single .osu file with shared, sequentially numbered audio/background resources.
+
+To open the export window, go to the top menu and select `File > Export merged osz...`.
+
+1. **Pick a collection** from the dropdown at the top. Its beatmaps appear in the left list (maps that are missing from your local osu! songs folder cannot be added).
+2. **Add maps** to the export list on the right: select multiple maps and press the `Add` button, or drag them over. Remove with the `Remove` button or by dragging them back. Reorder entries with the up/down buttons or by dragging them within the list.
+3. **Edit display names**: double-click the `Version name` column of an entry to change how it is labelled in the pack. The first entry is a non-removable placeholder map (default name `delete`), which is included in the pack like in osupack-style packs.
+4. **Fill in pack settings**: pack name, creator name, extra tags (aggregated into every file's `Tags` field) and the output directory.
+5. **Preview while you work**: the `Map` tab shows the beatmap of the currently selected export entry (background image, AR/CS/OD/stars); the `Collection text` tab shows a live generated bbcode song list that updates as you add, remove, rename or reorder entries.
+6. Press `Export .osz`. A progress dialog runs the export and reports the resulting file path. Maps that fail to export (e.g. unreadable local files) are reported with a `log.txt` written to the output directory.
+
+What the pack looks like:
+
+- One `.osu` file per entry: `Various Artists - {pack name} ({creator}) [{display name}].osu`, with `Title`/`TitleUnicode` set to the pack name, `Artist`/`ArtistUnicode` set to `Various Artists`, `Creator` set to the pack creator, `Version` set to the display name (default `{song name} [{mapper}]`), `BeatmapID=0` and `BeatmapSetID=-1`.
+- Audio and background files are renamed to `{index}.{ext}` and stored flat in the .osz. The game mode (`Mode`) of every difficulty is preserved.
+- The output is a single `{pack name}.osz` written to the chosen directory.
+- `log.txt` is only written when some maps failed to export; no other files are generated.
 
 ### **Collection File Formats**
 
