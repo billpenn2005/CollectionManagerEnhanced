@@ -132,8 +132,10 @@ public class MergedOszExporter
         string allTags = string.Join(' ', itemsArray
             .Where(item => !item.IsPlaceholder)
             .Select(item => item.Beatmap?.Tags)
+            .Append(extraTags)
             .Where(tags => !string.IsNullOrWhiteSpace(tags))
-            .Append(extraTags))
+            .SelectMany(tags => tags.Split(' ', StringSplitOptions.RemoveEmptyEntries))
+            .Distinct())
             .Trim();
 
         string tempDirectory = Path.Combine(_saveDirectory, "tmp_pack");

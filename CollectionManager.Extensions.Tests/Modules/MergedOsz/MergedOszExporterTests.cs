@@ -150,6 +150,33 @@ public sealed class MergedOszExporterTests : IDisposable
     }
 
     [Fact]
+    public void TagsShouldBeDeduplicatedAcrossSongs()
+    {
+        CreateBeatmapFolder(1, "Song One", "Creator One", "audio1.mp3", "bg1.jpg", "4k technical");
+        CreateBeatmapFolder(2, "Song Two", "Creator Two", "audio2.ogg", "bg2.png", "technical chill");
+        BeatmapExtension songOne = CreateBeatmap(1, "Song One", "Creator One", "audio1.mp3", "bg1.jpg", "4k technical");
+        BeatmapExtension songTwo = CreateBeatmap(2, "Song Two", "Creator Two", "audio2.ogg", "bg2.png", "technical chill");
+
+        MergedOszExporter exporter = new(_songsDirectory, _saveDirectory);
+        _ = exporter.Export(
+        [
+            MergedOszBeatmap.CreatePlaceholder(),
+            MergedOszBeatmap.FromBeatmap(songOne),
+            MergedOszBeatmap.FromBeatmap(songTwo),
+        ], PackName, PackCreator, "4k");
+
+        string oszPath = Path.Combine(_saveDirectory, $"{PackName}.osz");
+        using IArchive archive = ZipArchive.Open(oszPath);
+        IArchiveEntry entry = archive.Entries.First(e => e.Key.Contains("Song One", StringComparison.Ordinal));
+        using StreamReader reader = new(entry.OpenEntryStream());
+        string content = reader.ReadToEnd();
+
+        // "technical" and "4k" appear in multiple sources but must be emitted only once each
+        Assert.Contains("Tags:4k technical chill", content);
+        Assert.DoesNotContain("Tags:4k 4k", content);
+    }
+
+    [Fact]
     public void MissingSourceFilesShouldFailThatItemButExportRest()
     {
         // No files created on disk, only the beatmap entry
