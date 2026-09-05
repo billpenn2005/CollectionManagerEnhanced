@@ -81,7 +81,7 @@
             // 
             // fileToolStripMenuItem
             // 
-            fileToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] { MenuItem_Opennn, saveToolStripMenuItem, listingToolStripMenuItem1, toolStripSeparator4, Menu_mergeExportOsz, Menu_unloadCollections });
+            fileToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] { MenuItem_Opennn, Menu_importOsuCollector, saveToolStripMenuItem, listingToolStripMenuItem1, toolStripSeparator4, Menu_mergeExportOsz, Menu_unloadCollections });
             fileToolStripMenuItem.Name = "fileToolStripMenuItem";
             fileToolStripMenuItem.Size = new System.Drawing.Size(37, 20);
             fileToolStripMenuItem.Text = "File";
