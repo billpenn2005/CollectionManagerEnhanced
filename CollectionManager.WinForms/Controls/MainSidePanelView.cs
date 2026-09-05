@@ -51,6 +51,7 @@ public partial class MainSidePanelView : UserControl, IMainSidePanelView, IOnlin
         Menu_osustatsLogin.Click += (_, _) => SidePanelOperation?.Invoke(this, MainSidePanelActions.OsustatsLogin);
         Menu_saveOsuCollection.Click += (_, _) => SidePanelOperation?.Invoke(this, MainSidePanelActions.SaveDefaultCollection);
         Menu_resetSettings.Click += (_, _) => SidePanelOperation?.Invoke(this, MainSidePanelActions.ResetApplicationSettings);
+        Menu_downloadSources.Click += (_, _) => SidePanelOperation?.Invoke(this, MainSidePanelActions.DownloadSources);
         Menu_searchSyntax.Click += (_, _) => SidePanelOperation?.Invoke(this, MainSidePanelActions.SyntaxHelp);
         Menu_discord.Click += (_, _) => SidePanelOperation?.Invoke(this, MainSidePanelActions.Discord);
         Menu_github.Click += (_, _) => SidePanelOperation?.Invoke(this, MainSidePanelActions.Github);

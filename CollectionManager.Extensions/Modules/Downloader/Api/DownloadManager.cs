@@ -131,6 +131,20 @@ public abstract class DownloadManager : IDisposable
                         if (Clients.Count > 0)
                         {
                             DownloadItem downloadItem = _urlsToDownload.First.Value;
+                            if (downloadItem.Removed)
+                            {
+                                _urlsToDownload.RemoveFirst();
+                                return;
+                            }
+
+                            if (downloadItem.IsPaused)
+                            {
+                                // keep paused items out of the way of other downloads
+                                _urlsToDownload.RemoveFirst();
+                                _urlsToDownload.AddLast(downloadItem);
+                                return;
+                            }
+
                             if (!CanDownload(downloadItem))
                             {
                                 return;
@@ -207,6 +221,92 @@ public abstract class DownloadManager : IDisposable
         return true;
     }
 
+    /// <summary>Pauses a single item. A currently running download is cancelled; the item stays queued (skipped) until resumed.</summary>
+    public void PauseItem(DownloadItem downloadItem)
+    {
+        downloadItem.IsPaused = true;
+        downloadItem.DownloadSlotStatus = null;
+        if (downloadItem.WebClient?.IsBusy == true)
+        {
+            downloadItem.WebClient.CancelAsync();
+        }
+    }
+
+    /// <summary>Resumes a paused item so the queue can download it again.</summary>
+    public void ResumeItem(DownloadItem downloadItem)
+    {
+        downloadItem.IsPaused = false;
+        downloadItem.ResetErrorState();
+        lock (_urlsToDownload)
+        {
+            if (!_urlsToDownload.Contains(downloadItem))
+            {
+                _urlsToDownload.AddLast(downloadItem);
+            }
+        }
+    }
+
+    /// <summary>Removes an item from the download queue entirely (cancels a running download).</summary>
+    public void RemoveItem(DownloadItem downloadItem)
+    {
+        downloadItem.Removed = true;
+        downloadItem.IsPaused = false;
+        if (downloadItem.WebClient?.IsBusy == true)
+        {
+            downloadItem.WebClient.CancelAsync();
+        }
+
+        lock (_urlsToDownload)
+        {
+            _ = _urlsToDownload.Remove(downloadItem);
+        }
+    }
+
+    /// <summary>
+    /// Requeues a failed item for another attempt (from the same mirror).
+    /// Returns false when the item is still downloading or already removed.
+    /// </summary>
+    public bool RetryItem(DownloadItem downloadItem)
+    {
+        if (downloadItem.Removed || downloadItem.IsPaused || downloadItem.WebClient?.IsBusy == true)
+        {
+            return false;
+        }
+
+        downloadItem.ResetErrorState();
+        downloadItem.DownloadSlotStatus = null;
+        downloadItem.BytesRecived = 0;
+        downloadItem.TotalBytes = 0;
+        downloadItem.ProgressPrecentage = 0;
+        downloadItem.DownloadSpeed = 0;
+        lock (_urlsToDownload)
+        {
+            _urlsToDownload.AddLast(downloadItem);
+        }
+        return true;
+    }
+
+    /// <summary>
+    /// Manually switches a queued item to the next mirror candidate (wrapping around to the first)
+    /// and requeues it. Returns false when the item has no mirror candidates or is downloading.
+    /// </summary>
+    public bool SwitchMirror(DownloadItem downloadItem)
+    {
+        if (downloadItem.Candidates is not { Count: > 0 } candidates || downloadItem.WebClient?.IsBusy == true)
+        {
+            return false;
+        }
+
+        downloadItem.CurrentMirrorIndex = (downloadItem.CurrentMirrorIndex + 1) % candidates.Count;
+        downloadItem.ResetErrorState();
+        downloadItem.DownloadSlotStatus = $"Switching to {candidates[downloadItem.CurrentMirrorIndex].Name}...";
+        lock (_urlsToDownload)
+        {
+            _urlsToDownload.AddLast(downloadItem);
+        }
+        return true;
+    }
+
     internal class FileWorkerArgs
     {
         public string action { get; set; }
@@ -218,14 +318,18 @@ public abstract class DownloadManager : IDisposable
         lock (_lockingObject)
         {
             DownloadItem url = (DownloadItem)e.UserState;
+            url.DownloadSpeed = 0;
             bool error = false;
             if (e.Cancelled)
             {
                 url.DownloadAborted = true;//Progress = "download cancelled";
                 error = true;
-                lock (_urlsToDownload)
+                if (!url.Removed && !url.IsPaused)
                 {
-                    _ = _urlsToDownload.AddFirst(url);
+                    lock (_urlsToDownload)
+                    {
+                        _ = _urlsToDownload.AddFirst(url);
+                    }
                 }
             }
             else if (e.Error != null)
@@ -286,6 +390,7 @@ public abstract class DownloadManager : IDisposable
             }
             else
             {
+                url.DownloadSlotStatus = null;
                 string tempFileLocation = GetFullTempLocation(url.FileName);
                 string fileLocation = GetFullLocation(url.FileName);
                 FileOperations.Enqueue(new FileWorkerArgs()
@@ -311,7 +416,20 @@ public abstract class DownloadManager : IDisposable
         int progress = e.ProgressPercentage;
 
         DownloadItem DlItem = (DownloadItem)e.UserState;
-        downloadCheck[DlItem.WebClient.ClientId].bytesRecived = e.BytesReceived;
+        DownloadProgress check = downloadCheck[DlItem.WebClient.ClientId];
+        long now = Environment.TickCount64;
+        if (check.LastTick != 0)
+        {
+            long elapsedMs = now - check.LastTick;
+            long receivedDelta = e.BytesReceived - check.bytesRecived;
+            if (elapsedMs > 0)
+            {
+                DlItem.DownloadSpeed = receivedDelta * 1000.0 / elapsedMs;
+            }
+        }
+
+        check.LastTick = now;
+        check.bytesRecived = e.BytesReceived;
         if (DlItem.lastShownDlState != progress)
         {
             DlItem.lastShownDlState = progress;

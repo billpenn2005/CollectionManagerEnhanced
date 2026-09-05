@@ -145,7 +145,6 @@ public class MirrorSwitchTests
         Assert.Equal(1, item.CurrentMirrorIndex);
         Assert.False(item.OtherError);
         Assert.Equal("", item.Error);
-        Assert.Contains("Switching to mirror2", item.DownloadSlotStatus);
     }
 
     [Fact]

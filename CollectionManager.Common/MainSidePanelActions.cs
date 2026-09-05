@@ -27,4 +27,5 @@ public enum MainSidePanelActions
     Github,
     MergeExportOsz,
     OsuCollectorImport,
+    DownloadSources,
 }

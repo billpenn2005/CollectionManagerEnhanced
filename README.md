@@ -112,7 +112,11 @@ Besides the official source (which requires your osu! cookies), Collection Manag
 
 To use it, simply start a download (`Online > Download all missing maps`, or right-click a collection and `Download beatmaps`) and pick **"osu mirrors (anonymous)"** as the download source in the login window — no cookies will be requested. The built-in mirror list (in priority order): osu.direct, Nerinyan, Sayobot, Nekoha, Beatconnect, osu!dl, catboy.best, Hinamizawa, nzbasic.
 
-Downloads are throttled to 3 mapsets per minute / 170 per hour to stay polite to the mirrors. To add, remove or reorder mirrors, edit the `Mirrors` list of the `osu mirrors (anonymous)` entry in `downloadSources.json` (next to the Collection Manager executable). Each mirror entry has a `Name`, a `TemplateUrl` (full version) and a `TemplateUrlNoVideo` (no-video version); `{0}` is replaced with the beatmapset ID. You can also add your own custom mirror provider this way.
+Downloads are throttled to 3 mapsets per minute / 170 per hour to stay polite to the mirrors. The mirror list is built into the program and can be managed **in-app**: go to `Settings > Download sources...` to add, remove, reorder and edit mirrors (full & no-video URL templates with `{0}` as the beatmapset ID) and to inspect the sources. Changes are saved into the program settings (and mirrored to `downloadSources.json` next to the exe, which is still honoured when no saved settings exist).
+
+### **Download Manager**
+
+The download window (`Online > Show map downloads`) lists every download with **live progress** (e.g. `1.6/12.5MB 13%`), **speed**, the **mirror** currently in use and a status column. The global `Stop downloads` / `Resume downloads` button pauses the whole queue; right-clicking one or several selected downloads offers per-item `Pause` / `Resume` / `Remove` / `Retry` and `Switch mirror` (jumps to the next mirror and retries that item).
 
 ### **Importing Collections from osu!collector** *(added in this fork)*
 

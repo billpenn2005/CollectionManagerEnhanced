@@ -15,6 +15,11 @@ public interface IDownloadManagerModel
     void EmitStartDownloads();
     void EmitStopDownloads();
     void EmitLoginRequest();
+    void PauseItems(IEnumerable<DownloadItem> items);
+    void ResumeItems(IEnumerable<DownloadItem> items);
+    void RemoveItems(IEnumerable<DownloadItem> items);
+    void RetryItems(IEnumerable<DownloadItem> items);
+    void SwitchMirrorItems(IEnumerable<DownloadItem> items);
     ICollection<IDownloadItem> DownloadItems { get; set; }
     bool IsLoggedIn { get; set; }
 }

@@ -4,6 +4,7 @@ using CollectionManager.App.Shared.Interfaces.Controls;
 using CollectionManager.Common.Interfaces;
 using CollectionManager.Common.Interfaces.Controls;
 using CollectionManager.Extensions.Modules.Downloader.Api;
+using System.Linq;
 using System.Timers;
 
 public class DownloadManagerPresenter : IDisposable
@@ -18,6 +19,11 @@ public class DownloadManagerPresenter : IDisposable
     {
         _view = view;
         _view.DownloadToggleClick += ViewOnDownloadToggleClick;
+        _view.ItemPauseRequested += (_, _) => _model.PauseItems(_view.SelectedItems.OfType<DownloadItem>());
+        _view.ItemResumeRequested += (_, _) => _model.ResumeItems(_view.SelectedItems.OfType<DownloadItem>());
+        _view.ItemRemoveRequested += (_, _) => _model.RemoveItems(_view.SelectedItems.OfType<DownloadItem>());
+        _view.ItemRetryRequested += (_, _) => _model.RetryItems(_view.SelectedItems.OfType<DownloadItem>());
+        _view.ItemSwitchMirrorRequested += (_, _) => _model.SwitchMirrorItems(_view.SelectedItems.OfType<DownloadItem>());
         _view.Disposed += (s, a) =>
         {
             _model.DownloadItemsChanged -= ModelOnDownloadItemsChanged;

@@ -28,6 +28,16 @@ public class DownloadManagerModel : IDownloadManagerModel
 
     public void EmitLoginRequest() => LogInRequest?.Invoke(this, EventArgs.Empty);
 
+    public void PauseItems(IEnumerable<DownloadItem> items) => _osuDownloadManager?.PauseItems(items);
+
+    public void ResumeItems(IEnumerable<DownloadItem> items) => _osuDownloadManager?.ResumeItems(items);
+
+    public void RemoveItems(IEnumerable<DownloadItem> items) => _osuDownloadManager?.RemoveItems(items);
+
+    public void RetryItems(IEnumerable<DownloadItem> items) => _osuDownloadManager?.RetryItems(items);
+
+    public void SwitchMirrorItems(IEnumerable<DownloadItem> items) => _osuDownloadManager?.SwitchMirrorItems(items);
+
     private ICollection<IDownloadItem> _downloadItems;
 
     public ICollection<IDownloadItem> DownloadItems

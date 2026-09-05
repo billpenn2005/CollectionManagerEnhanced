@@ -58,6 +58,7 @@
             Menu_beatmapListing = new System.Windows.Forms.ToolStripMenuItem();
             settingsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             Menu_resetSettings = new System.Windows.Forms.ToolStripMenuItem();
+            Menu_downloadSources = new System.Windows.Forms.ToolStripMenuItem();
             helpToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             Menu_searchSyntax = new System.Windows.Forms.ToolStripMenuItem();
             toolStripSeparator1 = new System.Windows.Forms.ToolStripSeparator();
@@ -252,7 +253,7 @@
             // 
             // settingsToolStripMenuItem
             // 
-            settingsToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] { Menu_resetSettings });
+            settingsToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] { Menu_downloadSources, Menu_resetSettings });
             settingsToolStripMenuItem.Name = "settingsToolStripMenuItem";
             settingsToolStripMenuItem.Size = new System.Drawing.Size(61, 20);
             settingsToolStripMenuItem.Text = "Settings";
@@ -262,6 +263,12 @@
             Menu_resetSettings.Name = "Menu_resetSettings";
             Menu_resetSettings.Size = new System.Drawing.Size(102, 22);
             Menu_resetSettings.Text = "Reset";
+            // 
+            // Menu_downloadSources
+            // 
+            Menu_downloadSources.Name = "Menu_downloadSources";
+            Menu_downloadSources.Size = new System.Drawing.Size(102, 22);
+            Menu_downloadSources.Text = "Download sources...";
             // 
             // helpToolStripMenuItem
             // 
@@ -350,6 +357,7 @@
         private System.Windows.Forms.ToolStripMenuItem Menu_saveOsuCollection;
         private System.Windows.Forms.ToolStripMenuItem settingsToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem Menu_resetSettings;
+        private System.Windows.Forms.ToolStripMenuItem Menu_downloadSources;
         private System.Windows.Forms.ToolStripMenuItem listingToolStripMenuItem1;
         private System.Windows.Forms.ToolStripMenuItem Menu_listAllCollections;
         private System.Windows.Forms.ToolStripMenuItem Menu_listMissingMaps;

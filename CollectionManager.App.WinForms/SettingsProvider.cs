@@ -85,6 +85,12 @@ internal class SettingsProvider : IAppSettingsProvider
         set => settings.OsuCollectorImportDownloadBehavior = value;
     }
 
+    public string DownloadSourcesJson
+    {
+        get => settings.DownloadSourcesJson;
+        set => settings.DownloadSourcesJson = value;
+    }
+
     public void Load() => settings.Reload();
 
     public void Reset() => settings.Reset();

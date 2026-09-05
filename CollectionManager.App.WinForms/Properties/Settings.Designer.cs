@@ -166,5 +166,17 @@ namespace CollectionManager.App.Winforms.Properties {
                 this["OsuCollectorImportDownloadBehavior"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string DownloadSourcesJson {
+            get {
+                return ((string)(this["DownloadSourcesJson"]));
+            }
+            set {
+                this["DownloadSourcesJson"] = value;
+            }
+        }
     }
 }

@@ -17,6 +17,55 @@ using System.Threading.Tasks;
 public sealed class OsuDownloadManager
 {
     public static OsuDownloadManager Instance = new();
+
+    /// <summary>
+    /// Built-in default configuration used when no downloadSources.json and no saved
+    /// settings exist. Kept in the program so mirror sources work out of the box.
+    /// </summary>
+    private const string DefaultSourcesJson = """
+        [
+          {
+            "Name": "osu!",
+            "Description": "official map download source.\r\nIn order to download maps you need to login using osu! cookies.\r\nInstructions: https://streamable.com/lhlr3d \r\nIf you still need help join discord and read pinned message in #cm-help.\r\nhttps://discord.gg/N854wYZ",
+            "Referer": "https://osu.ppy.sh/beatmapsets/",
+            "BaseDownloadUrl": "https://osu.ppy.sh/beatmapsets/{0}/download",
+            "ThrottleDownloads": true,
+            "DownloadsPerMinute": 3,
+            "DownloadsPerHour": 170,
+            "DownloadThreads": 3,
+            "RequestTimeout": 5000,
+            "FullyQualifiedHandlerName": "CollectionManager.Extensions.Modules.Downloader.OsuDownloader, CollectionManager.Extensions",
+            "RequiresLogin": true,
+            "UseCookiesLogin": true
+          },
+          {
+            "Name": "osu mirrors (anonymous)",
+            "Description": "Community mirrors, no login required. On failure downloads automatically retry with the next mirror.",
+            "Referer": "",
+            "BaseDownloadUrl": "https://mirror.hinamizawa.ai/api/v1/hinai/d/{0}",
+            "ThrottleDownloads": true,
+            "DownloadsPerMinute": 3,
+            "DownloadsPerHour": 170,
+            "DownloadThreads": 3,
+            "RequestTimeout": 10000,
+            "FullyQualifiedHandlerName": "CollectionManager.Extensions.Modules.Downloader.Mirrors.MirrorDownloader, CollectionManager.Extensions",
+            "RequiresLogin": false,
+            "UseCookiesLogin": false,
+            "Mirrors": [
+              { "Name": "osu.direct", "TemplateUrl": "https://osu.direct/d/{0}", "TemplateUrlNoVideo": "https://osu.direct/d/{0}n", "Referer": "" },
+              { "Name": "Nerinyan", "TemplateUrl": "https://api.nerinyan.moe/d/{0}", "TemplateUrlNoVideo": "https://api.nerinyan.moe/d/{0}?nv=1", "Referer": "" },
+              { "Name": "Sayobot", "TemplateUrl": "https://dl.sayobot.cn/beatmaps/download/full/{0}", "TemplateUrlNoVideo": "https://dl.sayobot.cn/beatmaps/download/novideo/{0}", "Referer": "" },
+              { "Name": "Nekoha", "TemplateUrl": "https://mirror.nekoha.moe/api/download/{0}", "TemplateUrlNoVideo": "https://mirror.nekoha.moe/api/download/{0}", "Referer": "" },
+              { "Name": "Beatconnect", "TemplateUrl": "https://beatconnect.io/b/{0}/", "TemplateUrlNoVideo": "https://beatconnect.io/b/{0}/?novideo=1", "Referer": "" },
+              { "Name": "osu!dl", "TemplateUrl": "https://osudl.org/s/{0}", "TemplateUrlNoVideo": "https://osudl.org/s/{0}?video=false", "Referer": "" },
+              { "Name": "catboy.best", "TemplateUrl": "https://catboy.best/d/{0}", "TemplateUrlNoVideo": "https://catboy.best/d/{0}n", "Referer": "" },
+              { "Name": "Hinamizawa", "TemplateUrl": "https://mirror.hinamizawa.ai/api/v1/hinai/d/{0}", "TemplateUrlNoVideo": "https://mirror.hinamizawa.ai/api/v1/hinai/d/{0}?no_video=true", "Referer": "" },
+              { "Name": "nzbasic", "TemplateUrl": "https://direct.nzbasic.com/{0}.osz", "TemplateUrlNoVideo": "https://direct.nzbasic.com/{0}.osz", "Referer": "" }
+            ]
+          }
+        ]
+        """;
+
     //Collections for preparing downloads
     private Beatmaps BeatmapsToDownload { get; } = [];
     private HashSet<int> ListedMapSetIds { get; } = [];
@@ -26,15 +75,76 @@ public sealed class OsuDownloadManager
     public ICollection<IDownloadItem> DownloadItems { get; private set; } = [];
 
     private DownloadManager _mapDownloader;
-    private readonly Lazy<List<DownloadSource>> _downloadSources = new(() =>
+    private List<DownloadSource> _downloadSources;
+    private long _lastProgressUpdateTick;
+
+    private List<DownloadSource> LoadDownloadSources()
     {
         string configLocation = Path.Combine(Path.GetDirectoryName(Environment.ProcessPath), "downloadSources.json");
-        return !File.Exists(configLocation)
-            ? throw new FileNotFoundException("download sources configuration is missing!")
-            : JsonConvert.DeserializeObject<List<DownloadSource>>(File.ReadAllText(configLocation));
-    });
 
-    private IReadOnlyList<IDownloadSource> DownloadSources => _downloadSources.Value;
+        // 1. configuration saved through the in-app "Download sources" settings window
+        if (!string.IsNullOrWhiteSpace(Initalizer.Settings?.DownloadSourcesJson))
+        {
+            try
+            {
+                List<DownloadSource> saved = JsonConvert.DeserializeObject<List<DownloadSource>>(Initalizer.Settings.DownloadSourcesJson);
+                if (saved is { Count: > 0 })
+                {
+                    return saved;
+                }
+            }
+            catch
+            {
+                // fall through to the file / built-in defaults
+            }
+        }
+
+        // 2. optionally hand-edited downloadSources.json next to the executable
+        if (File.Exists(configLocation))
+        {
+            try
+            {
+                List<DownloadSource> sources = JsonConvert.DeserializeObject<List<DownloadSource>>(File.ReadAllText(configLocation));
+                if (sources is { Count: > 0 })
+                {
+                    return sources;
+                }
+            }
+            catch
+            {
+                // fall through to the built-in defaults
+            }
+        }
+
+        // 3. built-in defaults (official source + anonymous mirrors)
+        return JsonConvert.DeserializeObject<List<DownloadSource>>(DefaultSourcesJson);
+    }
+
+    private IReadOnlyList<IDownloadSource> DownloadSources => _downloadSources ??= LoadDownloadSources();
+
+    /// <summary>Returns the current download source list (for the settings UI).</summary>
+    public IReadOnlyList<IDownloadSource> GetDownloadSources() => DownloadSources;
+
+    /// <summary>Saves the download source list (falling back to the file next to the exe).</summary>
+    public void SaveDownloadSources(List<DownloadSource> sources)
+    {
+        _downloadSources = sources;
+        if (Initalizer.Settings is not null)
+        {
+            Initalizer.Settings.DownloadSourcesJson = JsonConvert.SerializeObject(sources);
+            Initalizer.Settings.Save();
+        }
+
+        try
+        {
+            string configLocation = Path.Combine(Path.GetDirectoryName(Environment.ProcessPath), "downloadSources.json");
+            File.WriteAllText(configLocation, JsonConvert.SerializeObject(sources, Formatting.Indented));
+        }
+        catch
+        {
+            // executable directory may be read-only; the settings entry still persists
+        }
+    }
     public IDownloadSource SelectedDownloadSource { get; private set; }
     public event EventHandler DownloadItemsChanged;
     public event EventHandler<DownloadItem> DownloadItemUpdated;
@@ -105,13 +215,68 @@ public sealed class OsuDownloadManager
     public void PauseDownloads() => _mapDownloader?.StopDownloads = true;
     public void ResumeDownloads() => _mapDownloader?.StopDownloads = false;
 
+    public void PauseItems(IEnumerable<DownloadItem> items)
+    {
+        foreach (DownloadItem item in items)
+        {
+            _mapDownloader?.PauseItem(item);
+        }
+
+        DownloadItemsChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    public void ResumeItems(IEnumerable<DownloadItem> items)
+    {
+        foreach (DownloadItem item in items)
+        {
+            _mapDownloader?.ResumeItem(item);
+        }
+
+        DownloadItemsChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    public void RemoveItems(IEnumerable<DownloadItem> items)
+    {
+        foreach (DownloadItem item in items)
+        {
+            _mapDownloader?.RemoveItem(item);
+        }
+
+        DownloadItems = [.. DownloadItems.Where(i => i is not DownloadItem item || !item.Removed)];
+        DownloadItemsChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    public void RetryItems(IEnumerable<DownloadItem> items)
+    {
+        foreach (DownloadItem item in items)
+        {
+            _mapDownloader?.RetryItem(item);
+        }
+
+        DownloadItemsChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    public void SwitchMirrorItems(IEnumerable<DownloadItem> items)
+    {
+        foreach (DownloadItem item in items)
+        {
+            _mapDownloader?.SwitchMirror(item);
+        }
+
+        DownloadItemsChanged?.Invoke(this, EventArgs.Empty);
+    }
+
     private void MapDownloaderOnProgressUpdated(object sender, DownloadProgressChangedEventArgs downloadProgressChangedEventArgs)
     {
-        DownloadItem item = (DownloadItem)downloadProgressChangedEventArgs.UserState;
-        if (item.ProgressPrecentage % 10 == 0)
+        long now = Environment.TickCount64;
+        if (now - _lastProgressUpdateTick < 500)
         {
-            DownloadItemUpdated?.Invoke(this, item);
+            return;
         }
+
+        _lastProgressUpdateTick = now;
+        DownloadItem item = (DownloadItem)downloadProgressChangedEventArgs.UserState;
+        DownloadItemUpdated?.Invoke(this, item);
     }
 
     internal void DownloadBeatmaps(Beatmaps selectedBeatmaps)

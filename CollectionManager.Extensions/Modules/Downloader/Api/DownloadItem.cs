@@ -16,6 +16,11 @@ public class DownloadItem : IDownloadItem
     {
         get
         {
+            if (IsPaused)
+            {
+                return "Paused";
+            }
+
             if (OtherError)
             {
                 return Error;
@@ -26,6 +31,17 @@ public class DownloadItem : IDownloadItem
                 return "Download cancelled";
             }
 
+            if (DownloadAborted)
+            {
+                return "Download cancelled";
+            }
+
+            if (BytesRecived > 0)
+            {
+                return string.Format("{0}/{1}MB {2}%", (BytesRecived / 1024f / 1024f).ToString("F"),
+                (TotalBytes / 1024f / 1024f).ToString("F"), ProgressPrecentage);
+            }
+
             if (!string.IsNullOrEmpty(DownloadSlotStatus))
             {
                 return DownloadSlotStatus;
@@ -34,12 +50,6 @@ public class DownloadItem : IDownloadItem
             if (FileAlreadyExists)
             {
                 return "File already exists";
-            }
-
-            if (BytesRecived > 0)
-            {
-                return string.Format("{0}/{1}MB {2}%", (BytesRecived / 1024f / 1024f).ToString("F"),
-                (TotalBytes / 1024f / 1024f).ToString("F"), ProgressPrecentage);
             }
 
             if (WebClient != null)
@@ -72,6 +82,38 @@ public class DownloadItem : IDownloadItem
     public int lastShownDlState { get; set; } = -1;
     public object UserToken { get; set; }
     public string Referer { get; set; }
+
+    /// <summary>True while the item is individually paused (not downloaded by the queue).</summary>
+    public bool IsPaused { get; set; }
+
+    /// <summary>True when the item was removed by the user; it will never download again.</summary>
+    public bool Removed { get; set; }
+
+    /// <summary>Current download speed in bytes per second (0 when not downloading).</summary>
+    public double DownloadSpeed { get; set; }
+
+    /// <summary>Name of the mirror candidate currently used, when mirror candidates exist.</summary>
+    public string CurrentMirrorName => Candidates is { Count: > 0 } candidates
+        ? candidates[Math.Min(CurrentMirrorIndex, candidates.Count - 1)].Name
+        : null;
+
+    /// <summary>Human readable current download speed (empty when not downloading).</summary>
+    public string SpeedText => DownloadSpeed > 0 ? $"{DownloadSpeed / 1024.0:F0} KB/s" : string.Empty;
+
+    /// <summary>Short lifecycle status used by the download manager UI.</summary>
+    public string Status
+    {
+        get
+        {
+            if (Removed) return "Removed";
+            if (IsPaused) return "Paused";
+            if (OtherError) return "Error";
+            if (DownloadAborted) return "Cancelled";
+            if (FileAlreadyExists) return "Already exists";
+            if (WebClient?.IsBusy == true) return "Downloading";
+            return "Queued";
+        }
+    }
 
     /// <summary>
     /// Alternative download URLs (anonymous mirrors) tried in order after failures.

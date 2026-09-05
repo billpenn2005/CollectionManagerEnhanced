@@ -4,6 +4,7 @@ internal class DownloadProgress
     public long SameValue = 0;
     public long LastBytesRecived { get; set; } = -2;
     public long bytesRecived { get; set; } = -1;
+    public long LastTick { get; set; }
     public DownloadItem downloadItem { get; set; } = null;
     public bool IsStalled()
     {
@@ -28,6 +29,7 @@ internal class DownloadProgress
     {
         LastBytesRecived = -2;
         bytesRecived = -1;
+        LastTick = 0;
         SameValue = 0;
         downloadItem = null;
     }

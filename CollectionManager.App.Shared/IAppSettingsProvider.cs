@@ -18,4 +18,5 @@ public interface IAppSettingsProvider
     string ScoresColumns { get; set; }
     string StartupSettings { get; set; }
     string OsuCollectorImportDownloadBehavior { get; set; }
+    string DownloadSourcesJson { get; set; }
 }
