@@ -33,6 +33,7 @@
             MenuItem_Opennn = new System.Windows.Forms.ToolStripMenuItem();
             Menu_loadCollection = new System.Windows.Forms.ToolStripMenuItem();
             Menu_loadDefaultCollection = new System.Windows.Forms.ToolStripMenuItem();
+            Menu_importOsuCollector = new System.Windows.Forms.ToolStripMenuItem();
             saveToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             Menu_saveAllCollectionsAsDb = new System.Windows.Forms.ToolStripMenuItem();
             Menu_saveAllCollectionsAsOsdb = new System.Windows.Forms.ToolStripMenuItem();
