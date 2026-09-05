@@ -31,11 +31,6 @@ public class DownloadItem : IDownloadItem
                 return "Download cancelled";
             }
 
-            if (DownloadAborted)
-            {
-                return "Download cancelled";
-            }
-
             if (BytesRecived > 0)
             {
                 return string.Format("{0}/{1}MB {2}%", (BytesRecived / 1024f / 1024f).ToString("F"),
@@ -86,6 +81,21 @@ public class DownloadItem : IDownloadItem
     /// <summary>True while the item is individually paused (not downloaded by the queue).</summary>
     public bool IsPaused { get; set; }
 
+    /// <summary>True while a download task is in flight for this item (guards against double starts).</summary>
+    public bool IsDownloading { get; set; }
+
+    /// <summary>Set when the in-flight HTTP request was aborted (pause / stop / remove / stall).</summary>
+    public bool AbortRequested { get; set; }
+
+    /// <summary>Byte offset to resume from after a pause/stop (0 = start over).</summary>
+    public long ResumeOffset { get; set; }
+
+    /// <summary>Beatmap set id used to rebuild the URL when the download source is switched.</summary>
+    public int MapSetId { get; set; }
+
+    /// <summary>True when the download finished or the file already exists.</summary>
+    public bool IsCompleted => FileAlreadyExists || (TotalBytes > 0 && BytesRecived >= TotalBytes);
+
     /// <summary>True when the item was removed by the user; it will never download again.</summary>
     public bool Removed { get; set; }
 
@@ -110,6 +120,7 @@ public class DownloadItem : IDownloadItem
             if (OtherError) return "Error";
             if (DownloadAborted) return "Cancelled";
             if (FileAlreadyExists) return "Already exists";
+            if (IsCompleted) return "Completed";
             if (WebClient?.IsBusy == true) return "Downloading";
             return "Queued";
         }
@@ -130,6 +141,18 @@ public class DownloadItem : IDownloadItem
         OtherError = false;
         DownloadAborted = false;
         FileAlreadyExists = false;
+    }
+
+    /// <summary>Forgets downloaded progress so the next attempt starts over (mirror switch / retry).</summary>
+    public void ResetTransferState()
+    {
+        ResetErrorState();
+        ResumeOffset = 0;
+        BytesRecived = 0;
+        TotalBytes = 0;
+        ProgressPrecentage = 0;
+        DownloadSpeed = 0;
+        lastShownDlState = -1;
     }
     public override string ToString() => "DLitem: " + Url + " ; " + FileName;
 }

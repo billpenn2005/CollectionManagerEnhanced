@@ -20,6 +20,9 @@ public interface IDownloadManagerModel
     void RemoveItems(IEnumerable<DownloadItem> items);
     void RetryItems(IEnumerable<DownloadItem> items);
     void SwitchMirrorItems(IEnumerable<DownloadItem> items);
+    void SetDownloadSource(string name);
+    IReadOnlyList<string> DownloadSourceNames { get; }
+    string SelectedDownloadSourceName { get; }
     ICollection<IDownloadItem> DownloadItems { get; set; }
     bool IsLoggedIn { get; set; }
 }

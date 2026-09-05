@@ -4,6 +4,7 @@ using CollectionManager.App.Shared.Interfaces.Controls;
 using CollectionManager.App.Shared.Misc;
 using CollectionManager.Common.Interfaces;
 using CollectionManager.Extensions.Modules.Downloader.Api;
+using System.Linq;
 
 public class DownloadManagerModel : IDownloadManagerModel
 {
@@ -37,6 +38,12 @@ public class DownloadManagerModel : IDownloadManagerModel
     public void RetryItems(IEnumerable<DownloadItem> items) => _osuDownloadManager?.RetryItems(items);
 
     public void SwitchMirrorItems(IEnumerable<DownloadItem> items) => _osuDownloadManager?.SwitchMirrorItems(items);
+
+    public void SetDownloadSource(string name) => _osuDownloadManager?.ChangeSelectedDownloadSource(name);
+
+    public IReadOnlyList<string> DownloadSourceNames => _osuDownloadManager.GetDownloadSources().Select(s => s.Name).ToList();
+
+    public string SelectedDownloadSourceName => _osuDownloadManager.SelectedDownloadSource?.Name;
 
     private ICollection<IDownloadItem> _downloadItems;
 

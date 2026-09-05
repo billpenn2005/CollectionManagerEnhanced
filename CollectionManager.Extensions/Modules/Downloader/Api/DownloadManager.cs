@@ -31,6 +31,7 @@ public abstract class DownloadManager : IDisposable
     }
 
     private readonly Dictionary<int, DownloadProgress> downloadCheck = [];
+    private readonly Dictionary<DownloadItem, HttpWebRequest> _activeRequests = [];
     private bool _stopDownloads;
     public event EventHandler<DownloadProgressChangedEventArgs> ProgressUpdated;
     private static readonly object _lockingObject = new();
@@ -69,6 +70,7 @@ public abstract class DownloadManager : IDisposable
                 if (dlItemCheck.Value.IsStalled())
                 {
                     dlItemCheck.Value.downloadItem.WebClient.CancelAsync();
+                    AbortActiveRequest(dlItemCheck.Value.downloadItem);
                 }
 
                 dlItemCheck.Value.Process();
@@ -170,10 +172,16 @@ public abstract class DownloadManager : IDisposable
     {
         lock (_lockingObject)
         {
+            if (downloadItem.IsDownloading)
+            {
+                return false; // already in flight (double enqueue guard)
+            }
+
             string filePath = Path.Combine(_saveLocation, downloadItem.FileName);
             if (File.Exists(filePath))
             {
                 downloadItem.FileAlreadyExists = true;
+                downloadItem.ResumeOffset = 0;
                 Clients.Enqueue(downloadItem.WebClient);
                 return false;
             }
@@ -184,15 +192,159 @@ public abstract class DownloadManager : IDisposable
                 downloadItem.Url = candidates[index].Url;
                 downloadItem.DownloadSlotStatus = $"Downloading from {candidates[index].Name}...";
             }
+            else
+            {
+                downloadItem.DownloadSlotStatus = "Downloading...";
+            }
 
             downloadCheck[downloadItem.WebClient.ClientId].Reset();
             downloadItem.ResetErrorState();
             downloadCheck[downloadItem.WebClient.ClientId].downloadItem = downloadItem;
             downloadItem.WebClient.Headers["Referer"] = downloadItem.Referer;
-            downloadItem.WebClient.DownloadFileAsync(new Uri(downloadItem.Url),
-                GetFullTempLocation(downloadItem.FileName), downloadItem);
+
+            string tempFileLocation = GetFullTempLocation(downloadItem.FileName);
+            long offset = 0;
+            if (downloadItem.ResumeOffset > 0 && File.Exists(tempFileLocation) && downloadItem.ResumeOffset <= new FileInfo(tempFileLocation).Length)
+            {
+                offset = downloadItem.ResumeOffset;
+            }
+
+            if (offset > 0)
+            {
+                downloadItem.WebClient.Headers[HttpRequestHeader.Range] = $"bytes={offset}-";
+                downloadItem.DownloadSlotStatus = $"Resuming from {(offset / 1024f / 1024f):F1}MB...";
+            }
+            else
+            {
+                downloadItem.WebClient.Headers.Remove(HttpRequestHeader.Range);
+                downloadItem.ResumeOffset = 0;
+            }
+
+            downloadItem.DownloadSlotStatus ??= "Downloading...";
+            downloadItem.IsDownloading = true;
+            downloadItem.AbortRequested = false; // fresh start (previous pause / stop must not cancel this attempt)
+            _ = DownloadFileAsync(downloadItem, tempFileLocation, offset);
             return true;
         }
+    }
+
+    /// <summary>
+    /// Downloads the item body to the temp file ourselves (instead of WebClient.DownloadFileAsync)
+    /// so a paused/stopped download can resume from the byte offset via a Range request, and so a
+    /// partial temp file survives pausing (no more delete-on-pause).
+    /// </summary>
+    private async Task DownloadFileAsync(DownloadItem downloadItem, string tempFileLocation, long offset)
+    {
+        CookieAwareWebClient client = downloadItem.WebClient;
+        bool cancelled = false;
+        HttpWebRequest request = null;
+        try
+        {
+            request = (HttpWebRequest)WebRequest.Create(downloadItem.Url);
+            request.UserAgent = client.UserAgent;
+            request.CookieContainer = client.CookieContainer;
+            request.Timeout = client.RequestTimeout;
+            request.AllowAutoRedirect = true;
+            if (!string.IsNullOrEmpty(downloadItem.Referer))
+            {
+                request.Referer = downloadItem.Referer;
+            }
+
+            if (offset > 0)
+            {
+                request.AddRange(offset);
+            }
+
+            lock (_activeRequests)
+            {
+                _activeRequests[downloadItem] = request;
+            }
+
+            long total;
+            WebResponse response = await request.GetResponseAsync();
+            if (response == null)
+            {
+                // aborted via request.Abort() (pause / stop / remove / stall)
+                DownloadCompleted(client, new AsyncCompletedEventArgs(null, true, downloadItem));
+                return;
+            }
+
+            using (response)
+            {
+                total = offset + response.ContentLength;
+                using Stream webStream = response.GetResponseStream();
+                using FileStream fileStream = new(tempFileLocation, offset > 0 ? FileMode.Append : FileMode.Create, FileAccess.Write);
+                byte[] buffer = new byte[128 * 1024];
+                long received = offset;
+                while (true)
+                {
+                    // HttpWebRequest.Abort() does not interrupt an already-started response stream,
+                    // so pausing/stopping is handled here: stop the copy loop and report as cancelled.
+                    if (downloadItem.AbortRequested || downloadItem.Removed || downloadItem.IsPaused || StopDownloads)
+                    {
+                        DownloadCompleted(client, new AsyncCompletedEventArgs(null, true, downloadItem));
+                        return;
+                    }
+
+                    int read = await webStream.ReadAsync(buffer);
+                    if (read <= 0)
+                    {
+                        break;
+                    }
+
+                    await fileStream.WriteAsync(buffer.AsMemory(0, read));
+                    received += read;
+                    ReportTransferProgress(downloadItem, received, total);
+                }
+            }
+
+            downloadItem.ResumeOffset = 0;
+            downloadItem.DownloadSlotStatus = null;
+            downloadItem.AbortRequested = false;
+            DownloadCompleted(client, new AsyncCompletedEventArgs(null, false, downloadItem));
+        }
+        catch (Exception ex)
+        {
+            bool wasCancelled = downloadItem.AbortRequested || downloadItem.Removed || downloadItem.IsPaused || StopDownloads
+                || ex is WebException { Status: WebExceptionStatus.RequestCanceled } || ex is ObjectDisposedException
+                || (ex as IOException)?.Message?.Contains("aborted", StringComparison.OrdinalIgnoreCase) == true;
+            DownloadCompleted(client, new AsyncCompletedEventArgs(wasCancelled ? null : ex, wasCancelled, downloadItem));
+        }
+        finally
+        {
+            lock (_activeRequests)
+            {
+                _activeRequests.Remove(downloadItem);
+            }
+
+            downloadItem.IsDownloading = false;
+        }
+    }
+
+    private void ReportTransferProgress(DownloadItem downloadItem, long received, long total)
+    {
+        int percentage = total > 0 ? (int)(received * 100 / total) : 0;
+        if (downloadItem.lastShownDlState != percentage)
+        {
+            downloadItem.lastShownDlState = percentage;
+            DownloadProgressChangedEventArgs args = (DownloadProgressChangedEventArgs)Activator.CreateInstance(typeof(DownloadProgressChangedEventArgs),
+                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic, null, [percentage, downloadItem, received, total], null);
+            OnProgressUpdated(args);
+        }
+
+        DownloadProgress check = downloadCheck[downloadItem.WebClient.ClientId];
+        long now = Environment.TickCount64;
+        if (check.LastTick != 0)
+        {
+            long elapsedMs = now - check.LastTick;
+            if (elapsedMs > 0)
+            {
+                downloadItem.DownloadSpeed = (received - check.bytesRecived) * 1000.0 / elapsedMs;
+            }
+        }
+
+        check.LastTick = now;
+        check.bytesRecived = received;
     }
 
     /// <summary>
@@ -208,7 +360,7 @@ public abstract class DownloadManager : IDisposable
         }
 
         downloadItem.CurrentMirrorIndex++;
-        downloadItem.ResetErrorState();
+        downloadItem.ResetTransferState(); // different mirror -> start over
         downloadItem.DownloadSlotStatus = $"Switching to {candidates[downloadItem.CurrentMirrorIndex].Name}...";
         lock (_urlsToDownload)
         {
@@ -221,6 +373,22 @@ public abstract class DownloadManager : IDisposable
         return true;
     }
 
+    /// <summary>Aborts the in-flight HTTP request of an item (used by pause / stop / remove / stall).</summary>
+    private void AbortActiveRequest(DownloadItem downloadItem)
+    {
+        lock (_activeRequests)
+        {
+            if (_activeRequests.TryGetValue(downloadItem, out HttpWebRequest request))
+            {
+                downloadItem.AbortRequested = true;
+                try
+                {
+                    request.Abort();
+                }
+                catch (ObjectDisposedException) { }
+            }
+        }
+    }
     /// <summary>Pauses a single item. A currently running download is cancelled; the item stays queued (skipped) until resumed.</summary>
     public void PauseItem(DownloadItem downloadItem)
     {
@@ -230,6 +398,8 @@ public abstract class DownloadManager : IDisposable
         {
             downloadItem.WebClient.CancelAsync();
         }
+
+        AbortActiveRequest(downloadItem);
     }
 
     /// <summary>Resumes a paused item so the queue can download it again.</summary>
@@ -256,6 +426,8 @@ public abstract class DownloadManager : IDisposable
             downloadItem.WebClient.CancelAsync();
         }
 
+        AbortActiveRequest(downloadItem);
+
         lock (_urlsToDownload)
         {
             _ = _urlsToDownload.Remove(downloadItem);
@@ -268,17 +440,13 @@ public abstract class DownloadManager : IDisposable
     /// </summary>
     public bool RetryItem(DownloadItem downloadItem)
     {
-        if (downloadItem.Removed || downloadItem.IsPaused || downloadItem.WebClient?.IsBusy == true)
+        if (downloadItem.Removed || downloadItem.IsPaused || downloadItem.IsDownloading)
         {
             return false;
         }
 
-        downloadItem.ResetErrorState();
+        downloadItem.ResetTransferState();
         downloadItem.DownloadSlotStatus = null;
-        downloadItem.BytesRecived = 0;
-        downloadItem.TotalBytes = 0;
-        downloadItem.ProgressPrecentage = 0;
-        downloadItem.DownloadSpeed = 0;
         lock (_urlsToDownload)
         {
             _urlsToDownload.AddLast(downloadItem);
@@ -292,19 +460,40 @@ public abstract class DownloadManager : IDisposable
     /// </summary>
     public bool SwitchMirror(DownloadItem downloadItem)
     {
-        if (downloadItem.Candidates is not { Count: > 0 } candidates || downloadItem.WebClient?.IsBusy == true)
+        if (downloadItem.Candidates is not { Count: > 0 } candidates || downloadItem.IsDownloading)
         {
             return false;
         }
 
         downloadItem.CurrentMirrorIndex = (downloadItem.CurrentMirrorIndex + 1) % candidates.Count;
-        downloadItem.ResetErrorState();
+        downloadItem.ResetTransferState(); // different mirror -> start over
         downloadItem.DownloadSlotStatus = $"Switching to {candidates[downloadItem.CurrentMirrorIndex].Name}...";
         lock (_urlsToDownload)
         {
             _urlsToDownload.AddLast(downloadItem);
         }
         return true;
+    }
+
+    /// <summary>Items still waiting in the queue (for transferring them to a new download source).</summary>
+    public List<DownloadItem> GetPendingItems()
+    {
+        List<DownloadItem> items;
+        lock (_urlsToDownload)
+        {
+            items = [.. _urlsToDownload];
+        }
+
+        return [.. items.Where(i => !i.Removed && !i.IsCompleted)];
+    }
+
+    /// <summary>Adds an item to the download queue (used when migrating items to a new downloader).</summary>
+    public void EnqueueItem(DownloadItem downloadItem)
+    {
+        lock (_urlsToDownload)
+        {
+            _urlsToDownload.AddLast(downloadItem);
+        }
     }
 
     internal class FileWorkerArgs
@@ -322,10 +511,25 @@ public abstract class DownloadManager : IDisposable
             bool error = false;
             if (e.Cancelled)
             {
-                url.DownloadAborted = true;//Progress = "download cancelled";
-                error = true;
-                if (!url.Removed && !url.IsPaused)
+                // Pause / global stop / stall / remove — never lose the partial file.
+                // Progress is remembered so the next attempt resumes from the byte offset
+                // (the actual temp file size, which is what the server can resume from).
+                string tempFileLocation = GetFullTempLocation(url.FileName);
+                url.ResumeOffset = File.Exists(tempFileLocation) ? new FileInfo(tempFileLocation).Length : 0;
+                if (url.Removed)
                 {
+                    url.DownloadAborted = true;
+                    error = true; // remove temp on the next watcher tick
+                }
+                else if (url.IsPaused)
+                {
+                    // individually paused: stays out of the queue until ResumeItem()
+                    url.DownloadAborted = false;
+                }
+                else
+                {
+                    // global stop / stall / source switch: stays queued and restarts when resumed
+                    url.DownloadAborted = false;
                     lock (_urlsToDownload)
                     {
                         _ = _urlsToDownload.AddFirst(url);
@@ -350,21 +554,25 @@ public abstract class DownloadManager : IDisposable
                     }
                     else if (response.StatusCode == HttpStatusCode.Forbidden)
                     {
-                        url.OtherError = true;
-                        url.Error = "Download limit hit - download has been paused (next check in 10minutes)";
-                        if (!StopDownloads)
+                        if (!TrySwitchMirror(url))
                         {
-                            StopDownloads = true;
-                            _ = Task.Run(async () =>
+                            // official source: legacy 10 minute rate limit pause
+                            url.OtherError = true;
+                            url.Error = "Download limit hit - download has been paused (next check in 10minutes)";
+                            if (!StopDownloads)
                             {
-                                await Task.Delay(60 * 1000 * 10);
-                                StopDownloads = false;
-                            });
-                        }
+                                StopDownloads = true;
+                                _ = Task.Run(async () =>
+                                {
+                                    await Task.Delay(60 * 1000 * 10);
+                                    StopDownloads = false;
+                                });
+                            }
 
-                        lock (_urlsToDownload)
-                        {
-                            _ = _urlsToDownload.AddFirst(url);
+                            lock (_urlsToDownload)
+                            {
+                                _ = _urlsToDownload.AddFirst(url);
+                            }
                         }
 
                         handled = true;
@@ -379,6 +587,7 @@ public abstract class DownloadManager : IDisposable
                 }
             }
 
+            bool success = !e.Cancelled && e.Error == null;
             if (error)
             {
                 string tempFileLocation = GetFullTempLocation(url.FileName);
@@ -388,7 +597,7 @@ public abstract class DownloadManager : IDisposable
                     orginalLocation = tempFileLocation
                 });
             }
-            else
+            else if (success)
             {
                 url.DownloadSlotStatus = null;
                 string tempFileLocation = GetFullTempLocation(url.FileName);

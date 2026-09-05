@@ -38,6 +38,8 @@ namespace GuiComponents.Controls
             olvColumn_status = new BrightIdeasSoftware.OLVColumn();
             button_ToggleDownloads = new System.Windows.Forms.Button();
             label_status = new System.Windows.Forms.Label();
+            label_source = new System.Windows.Forms.Label();
+            comboBox_source = new System.Windows.Forms.ComboBox();
             contextMenuStrip_downloads = new System.Windows.Forms.ContextMenuStrip(components);
             menuItem_pause = new System.Windows.Forms.ToolStripMenuItem();
             menuItem_resume = new System.Windows.Forms.ToolStripMenuItem();
@@ -129,6 +131,25 @@ namespace GuiComponents.Controls
             label_status.TabIndex = 4;
             label_status.Text = "         ";
             // 
+            // label_source
+            // 
+            label_source.AutoSize = true;
+            label_source.Location = new System.Drawing.Point(300, 9);
+            label_source.Name = "label_source";
+            label_source.Size = new System.Drawing.Size(41, 15);
+            label_source.TabIndex = 5;
+            label_source.Text = "Source:";
+            // 
+            // comboBox_source
+            // 
+            comboBox_source.Anchor = System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right;
+            comboBox_source.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            comboBox_source.FormattingEnabled = true;
+            comboBox_source.Location = new System.Drawing.Point(340, 5);
+            comboBox_source.Name = "comboBox_source";
+            comboBox_source.Size = new System.Drawing.Size(232, 23);
+            comboBox_source.TabIndex = 6;
+            // 
             // contextMenuStrip_downloads
             // 
             contextMenuStrip_downloads.Items.AddRange(new System.Windows.Forms.ToolStripItem[] { menuItem_pause, menuItem_resume, menuItem_remove, toolStripSeparator1, menuItem_retry, menuItem_switchMirror });
@@ -176,6 +197,8 @@ namespace GuiComponents.Controls
             AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             Controls.Add(label_status);
             Controls.Add(button_ToggleDownloads);
+            Controls.Add(comboBox_source);
+            Controls.Add(label_source);
             Controls.Add(ListViewDownload);
             Margin = new System.Windows.Forms.Padding(4, 3, 4, 3);
             Name = "DownloadManagerView";
@@ -198,6 +221,8 @@ namespace GuiComponents.Controls
         private BrightIdeasSoftware.OLVColumn olvColumn_status;
         private System.Windows.Forms.Button button_ToggleDownloads;
         private System.Windows.Forms.Label label_status;
+        private System.Windows.Forms.Label label_source;
+        private System.Windows.Forms.ComboBox comboBox_source;
         private System.Windows.Forms.ContextMenuStrip contextMenuStrip_downloads;
         private System.Windows.Forms.ToolStripMenuItem menuItem_pause;
         private System.Windows.Forms.ToolStripMenuItem menuItem_resume;

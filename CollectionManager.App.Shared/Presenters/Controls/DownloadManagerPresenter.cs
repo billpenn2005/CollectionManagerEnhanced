@@ -24,6 +24,7 @@ public class DownloadManagerPresenter : IDisposable
         _view.ItemRemoveRequested += (_, _) => _model.RemoveItems(_view.SelectedItems.OfType<DownloadItem>());
         _view.ItemRetryRequested += (_, _) => _model.RetryItems(_view.SelectedItems.OfType<DownloadItem>());
         _view.ItemSwitchMirrorRequested += (_, _) => _model.SwitchMirrorItems(_view.SelectedItems.OfType<DownloadItem>());
+        _view.DownloadSourceChanged += (_, _) => _model.SetDownloadSource(_view.SelectedDownloadSourceName);
         _view.Disposed += (s, a) =>
         {
             _model.DownloadItemsChanged -= ModelOnDownloadItemsChanged;
@@ -40,6 +41,8 @@ public class DownloadManagerPresenter : IDisposable
         {
             PopulateView(_model.DownloadItems);
         }
+
+        _view.SetDownloadSources(_model.DownloadSourceNames, _model.SelectedDownloadSourceName);
     }
 
     private void ModelOnDownloadItemUpdated(object sender, DownloadItem downloadItem) => _view.UpdateDownloadItem(downloadItem);

@@ -18,6 +18,8 @@ public partial class DownloadManagerView : UserControl, IDownloadManagerView
         ListViewDownload.FullRowSelect = true;
         ListViewDownload.MultiSelect = true;
 
+        comboBox_source.SelectedIndexChanged += (_, _) => DownloadSourceChanged?.Invoke(this, EventArgs.Empty);
+
         contextMenuStrip_downloads.Opening += ContextMenuStrip_Downloads_Opening;
         menuItem_pause.Click += (_, _) => ItemPauseRequested?.Invoke(this, EventArgs.Empty);
         menuItem_resume.Click += (_, _) => ItemResumeRequested?.Invoke(this, EventArgs.Empty);
@@ -32,6 +34,7 @@ public partial class DownloadManagerView : UserControl, IDownloadManagerView
     public event EventHandler ItemRemoveRequested;
     public event EventHandler ItemRetryRequested;
     public event EventHandler ItemSwitchMirrorRequested;
+    public event EventHandler DownloadSourceChanged;
 
     public bool DownloadButtonIsEnabled
     {
@@ -43,19 +46,28 @@ public partial class DownloadManagerView : UserControl, IDownloadManagerView
         set => button_ToggleDownloads.Text = value;
     }
 
+    public string SelectedDownloadSourceName => comboBox_source.SelectedItem as string;
+
+    public void SetDownloadSources(IEnumerable<string> names, string selected)
+    {
+        comboBox_source.Items.Clear();
+        comboBox_source.Items.AddRange(names.Cast<object>().ToArray());
+        int index = Math.Max(0, names.ToList().IndexOf(selected ?? string.Empty));
+        comboBox_source.SelectedIndex = index;
+    }
+
     public IEnumerable<IDownloadItem> SelectedItems => ListViewDownload.SelectedObjects.Cast<IDownloadItem>();
 
     private void ContextMenuStrip_Downloads_Opening(object sender, System.ComponentModel.CancelEventArgs e)
     {
         IReadOnlyList<DownloadItem> selected = ListViewDownload.SelectedObjects.Cast<DownloadItem>().ToList();
         bool any = selected.Count > 0;
-        bool anyActive = selected.Any(i => i.WebClient?.IsBusy == true);
-        bool anyPaused = selected.Any(i => i.IsPaused);
-        menuItem_pause.Enabled = any && anyActive;
-        menuItem_resume.Enabled = any && anyPaused;
+        bool anyCompleted = selected.Any(i => i.Removed || i.IsCompleted);
+        menuItem_pause.Enabled = any && selected.Any(i => !i.Removed && !i.IsCompleted && !i.IsPaused);
+        menuItem_resume.Enabled = any && selected.Any(i => i.IsPaused);
         menuItem_remove.Enabled = any;
-        menuItem_retry.Enabled = any && selected.Any(i => i.OtherError || i.DownloadAborted);
-        menuItem_switchMirror.Enabled = any && selected.Any(i => i.Candidates is { Count: > 0 }) && !anyActive;
+        menuItem_retry.Enabled = any && selected.Any(i => !i.IsPaused && (i.OtherError || i.DownloadAborted));
+        menuItem_switchMirror.Enabled = any && !anyCompleted && selected.Any(i => i.Candidates is { Count: > 0 }) && selected.All(i => i.WebClient?.IsBusy != true && !i.IsPaused);
     }
 
     private void SafeInvoke(MethodInvoker action)

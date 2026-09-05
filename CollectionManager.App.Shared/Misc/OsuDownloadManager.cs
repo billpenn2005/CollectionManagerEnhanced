@@ -215,6 +215,93 @@ public sealed class OsuDownloadManager
     public void PauseDownloads() => _mapDownloader?.StopDownloads = true;
     public void ResumeDownloads() => _mapDownloader?.StopDownloads = false;
 
+    /// <summary>
+    /// Switches the active download source at runtime. Queued items are migrated to the new
+    /// downloader (URLs and mirror candidates rebuilt for the new source); a download that is
+    /// currently in flight finishes on the old downloader untouched. Returns false when the
+    /// name is unknown or already selected.
+    /// </summary>
+    public bool ChangeSelectedDownloadSource(string name)
+    {
+        DownloadSource source = DownloadSources.OfType<DownloadSource>().FirstOrDefault(s => string.Equals(s.Name, name, StringComparison.OrdinalIgnoreCase));
+        if (source == null || source.Name == SelectedDownloadSource?.Name)
+        {
+            return false;
+        }
+
+        List<DownloadItem> pending = [];
+        List<DownloadItem> userPaused = [];
+        if (_mapDownloader != null)
+        {
+            // Park the queue. The old downloader is NOT disposed: an in-flight download keeps
+            // running there and its completed file is still moved into place by its watcher.
+            _mapDownloader.StopDownloads = true;
+            pending.AddRange(_mapDownloader.GetPendingItems());
+            userPaused.AddRange(pending.Where(i => i.IsPaused));
+            foreach (DownloadItem item in pending)
+            {
+                item.IsPaused = true; // keep items parked while the new downloader is built
+            }
+        }
+
+        SelectedDownloadSource = source;
+        IsLoggedIn = !SelectedDownloadSource.RequiresLogin;
+        _mapDownloader = CreateDownloader();
+
+        foreach (DownloadItem item in pending)
+        {
+            item.IsPaused = false;
+            item.ResetTransferState();
+            RebuildItemForSource(item);
+            _mapDownloader.EnqueueItem(item);
+            item.IsPaused = userPaused.Contains(item); // keep user-paused items paused on the new source
+        }
+
+        DownloadItemsChanged?.Invoke(this, EventArgs.Empty);
+        return true;
+    }
+
+    /// <summary>Rebuilds the URL and mirror candidates of an item for <see cref="SelectedDownloadSource"/>.</summary>
+    private void RebuildItemForSource(DownloadItem item)
+    {
+        item.Url = BuildDownloadUrl(item.MapSetId);
+        List<DownloadSourceMirror> mirrors = (SelectedDownloadSource as DownloadSource)?.Mirrors;
+        if (mirrors is { Count: > 0 })
+        {
+            item.Candidates = [.. mirrors.Select(mirror => new DownloadCandidate
+            {
+                Name = mirror.Name,
+                Url = string.Format(DownloadWithVideo == true ? mirror.TemplateUrl : mirror.TemplateUrlNoVideo, item.MapSetId),
+                Referer = string.IsNullOrEmpty(mirror.Referer) ? string.Format(SelectedDownloadSource.Referer, item.MapSetId) : mirror.Referer
+            })];
+            item.CurrentMirrorIndex = 0;
+        }
+        else
+        {
+            item.Candidates = null;
+            item.CurrentMirrorIndex = 0;
+        }
+    }
+
+    private string BuildDownloadUrl(int mapSetId)
+    {
+        string noVideoSuffix = DownloadWithVideo != null && DownloadWithVideo.Value ? string.Empty : "?noVideo=1";
+        return string.Format(SelectedDownloadSource.BaseDownloadUrl, mapSetId) + noVideoSuffix;
+    }
+
+    private DownloadManager CreateDownloader()
+    {
+        Type downloaderType = Type.GetType(SelectedDownloadSource.FullyQualifiedHandlerName);
+        if (downloaderType == null)
+        {
+            throw new NotImplementedException($"Download manager of type \"{SelectedDownloadSource.FullyQualifiedHandlerName}\" could not be found.");
+        }
+
+        DownloadManager downloader = (DownloadManager)Activator.CreateInstance(downloaderType, DownloadDirectory, SelectedDownloadSource.DownloadThreads, SelectedDownloadSource.DownloadsPerMinute, SelectedDownloadSource.DownloadsPerHour);
+        downloader.ProgressUpdated += MapDownloaderOnProgressUpdated;
+        return downloader;
+    }
+
     public void PauseItems(IEnumerable<DownloadItem> items)
     {
         foreach (DownloadItem item in items)
@@ -297,14 +384,7 @@ public sealed class OsuDownloadManager
         }
 
         SelectedDownloadSource = DownloadSources.First(s => s.Name == loginData.DownloadSource);
-        Type downloaderType = Type.GetType(SelectedDownloadSource.FullyQualifiedHandlerName);
-        if (downloaderType == null)
-        {
-            throw new NotImplementedException($"Download manager of type \"{SelectedDownloadSource.FullyQualifiedHandlerName}\" could not be found.");
-        }
-
-        _mapDownloader = (DownloadManager)Activator.CreateInstance(downloaderType, DownloadDirectory, SelectedDownloadSource.DownloadThreads, SelectedDownloadSource.DownloadsPerMinute, SelectedDownloadSource.DownloadsPerHour);
-        _mapDownloader.ProgressUpdated += MapDownloaderOnProgressUpdated;
+        _mapDownloader = CreateDownloader();
         return SelectedDownloadSource.RequiresLogin ? (IsLoggedIn = loginData.IsValid() && _mapDownloader.Login(loginData)) : (IsLoggedIn = true);
     }
 
@@ -338,21 +418,10 @@ public sealed class OsuDownloadManager
 
         long currentId = ++_downloadId;
         string oszFileName = beatmap.OszFileName();
-        string noVideoSuffix = DownloadWithVideo != null && DownloadWithVideo.Value ? string.Empty : "?noVideo=1";
-        string downloadUrl = string.Format(SelectedDownloadSource.BaseDownloadUrl, beatmap.MapSetId) + noVideoSuffix;
 
-        DownloadItem downloadItem = _mapDownloader.DownloadFile(downloadUrl, oszFileName, string.Format(SelectedDownloadSource.Referer, beatmap.MapSetId), currentId, SelectedDownloadSource.RequestTimeout);
-
-        if ((SelectedDownloadSource as DownloadSource)?.Mirrors is { Count: > 0 } mirrors)
-        {
-            downloadItem.Candidates = [.. mirrors.Select(mirror => new DownloadCandidate
-            {
-                Name = mirror.Name,
-                Url = string.Format(DownloadWithVideo == true ? mirror.TemplateUrl : mirror.TemplateUrlNoVideo, beatmap.MapSetId),
-                Referer = string.IsNullOrEmpty(mirror.Referer) ? string.Format(SelectedDownloadSource.Referer, beatmap.MapSetId) : mirror.Referer
-            })];
-        }
-
+        DownloadItem downloadItem = _mapDownloader.DownloadFile(BuildDownloadUrl(beatmap.MapSetId), oszFileName, string.Format(SelectedDownloadSource.Referer, beatmap.MapSetId), currentId, SelectedDownloadSource.RequestTimeout);
+        downloadItem.MapSetId = beatmap.MapSetId;
+        RebuildItemForSource(downloadItem);
         downloadItem.Id = currentId;
         return downloadItem;
     }
