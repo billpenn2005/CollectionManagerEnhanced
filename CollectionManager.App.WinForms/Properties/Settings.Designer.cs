@@ -154,5 +154,17 @@ namespace CollectionManager.App.Winforms.Properties {
                 this["BeatmapListingPresenterSettings"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("Ask")]
+        public string OsuCollectorImportDownloadBehavior {
+            get {
+                return ((string)(this["OsuCollectorImportDownloadBehavior"]));
+            }
+            set {
+                this["OsuCollectorImportDownloadBehavior"] = value;
+            }
+        }
     }
 }

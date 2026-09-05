@@ -79,6 +79,12 @@ internal class SettingsProvider : IAppSettingsProvider
         set => settings.StartupSettings = value;
     }
 
+    public string OsuCollectorImportDownloadBehavior
+    {
+        get => settings.OsuCollectorImportDownloadBehavior;
+        set => settings.OsuCollectorImportDownloadBehavior = value;
+    }
+
     public void Load() => settings.Reload();
 
     public void Reset() => settings.Reset();

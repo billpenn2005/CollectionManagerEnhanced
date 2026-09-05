@@ -6,9 +6,11 @@ using CollectionManager.Common.Interfaces;
 using CollectionManager.Common.Interfaces.Forms;
 using CollectionManager.Core.Types;
 using CollectionManager.Extensions.Modules.Downloader.Api;
+using CollectionManager.Extensions.Modules.Downloader.Mirrors;
 using CollectionManager.Extensions.Utils;
 using Newtonsoft.Json;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 
@@ -171,9 +173,21 @@ public sealed class OsuDownloadManager
 
         long currentId = ++_downloadId;
         string oszFileName = beatmap.OszFileName();
-        string downloadUrl = string.Format(SelectedDownloadSource.BaseDownloadUrl, beatmap.MapSetId) + (DownloadWithVideo != null && DownloadWithVideo.Value ? string.Empty : "?noVideo=1");
+        string noVideoSuffix = DownloadWithVideo != null && DownloadWithVideo.Value ? string.Empty : "?noVideo=1";
+        string downloadUrl = string.Format(SelectedDownloadSource.BaseDownloadUrl, beatmap.MapSetId) + noVideoSuffix;
 
         DownloadItem downloadItem = _mapDownloader.DownloadFile(downloadUrl, oszFileName, string.Format(SelectedDownloadSource.Referer, beatmap.MapSetId), currentId, SelectedDownloadSource.RequestTimeout);
+
+        if ((SelectedDownloadSource as DownloadSource)?.Mirrors is { Count: > 0 } mirrors)
+        {
+            downloadItem.Candidates = [.. mirrors.Select(mirror => new DownloadCandidate
+            {
+                Name = mirror.Name,
+                Url = string.Format(DownloadWithVideo == true ? mirror.TemplateUrl : mirror.TemplateUrlNoVideo, beatmap.MapSetId),
+                Referer = string.IsNullOrEmpty(mirror.Referer) ? string.Format(SelectedDownloadSource.Referer, beatmap.MapSetId) : mirror.Referer
+            })];
+        }
+
         downloadItem.Id = currentId;
         return downloadItem;
     }

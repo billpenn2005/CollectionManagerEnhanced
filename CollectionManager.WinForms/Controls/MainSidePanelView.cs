@@ -35,6 +35,7 @@ public partial class MainSidePanelView : UserControl, IMainSidePanelView, IOnlin
 
         Menu_loadCollection.Click += (_, _) => SidePanelOperation?.Invoke(this, MainSidePanelActions.LoadCollection);
         Menu_loadDefaultCollection.Click += (_, _) => SidePanelOperation?.Invoke(this, MainSidePanelActions.LoadDefaultCollection);
+        Menu_importOsuCollector.Click += (_, _) => SidePanelOperation?.Invoke(this, MainSidePanelActions.OsuCollectorImport);
         Menu_unloadCollections.Click += (_, _) => SidePanelOperation?.Invoke(this, MainSidePanelActions.ClearCollections);
         Menu_saveAllCollectionsAsDb.Click += (_, _) => SidePanelOperation?.Invoke(this, MainSidePanelActions.SaveCollectionsAsDb);
         Menu_saveAllCollectionsAsOsdb.Click += (_, _) => SidePanelOperation?.Invoke(this, MainSidePanelActions.SaveCollectionsAsOsdb);

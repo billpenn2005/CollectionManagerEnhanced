@@ -84,6 +84,7 @@ public class SidePanelActionsHandler : IDisposable
         { MainSidePanelActions.Discord, new DiscordLinkHandler() },
         { MainSidePanelActions.Github, new GithubLinkHandler() },
         { MainSidePanelActions.MergeExportOsz, new MergedOszExportHandler(userDialogs) },
+        { MainSidePanelActions.OsuCollectorImport, new OsuCollectorImportHandler(userDialogs, loginForm) },
     };
 
     private async void SidePanelViewOnSidePanelOperationEventHandler(object sender, MainSidePanelActions args, object data = null)

@@ -17,4 +17,5 @@ public interface IAppSettingsProvider
     string Osustats_apiKey { get; set; }
     string ScoresColumns { get; set; }
     string StartupSettings { get; set; }
+    string OsuCollectorImportDownloadBehavior { get; set; }
 }

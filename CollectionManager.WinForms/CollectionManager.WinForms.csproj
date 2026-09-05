@@ -123,6 +123,12 @@
     <Compile Update="Forms\MergedOszExportForm.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Update="Forms\OsuCollectorImportForm.Designer.cs">
+      <DependentUpon>OsuCollectorImportForm.cs</DependentUpon>
+    </Compile>
+    <Compile Update="Forms\OsuCollectorImportForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Update="Forms\MergedOszExportForm.Designer.cs">
       <DependentUpon>MergedOszExportForm.cs</DependentUpon>
     </Compile>

@@ -26,4 +26,5 @@ public enum MainSidePanelActions
     Discord,
     Github,
     MergeExportOsz,
+    OsuCollectorImport,
 }

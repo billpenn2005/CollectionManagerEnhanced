@@ -47,6 +47,14 @@ Order matters — a project may only reference projects listed below it:
 - **Long-running work** (e.g. export): run on `Task.Run`, report via `IUserDialogs.CreateProgressFormAsync(stringProgress, percentageProgress)` + `CancellationTokenSource` aborted from `progressForm.AbortClicked` (pattern: `App.Shared/Presenters/Forms/MergedOszExportFormPresenter.ExportAsync`). Dialogs go through `IUserDialogs`, never `MessageBox` directly in App.Shared.
 - **MVP wiring example**: `MergedOszExportHandler` (App.Shared) → `MergedOszExportForm` (WinForms) + `MergedOszExportFormPresenter` + `MergedOszExportModel`.
 
+## Download architecture (mirrors, osu!collector import)
+
+- `downloadSources.json` (next to the exe, copied from `App.Shared/downloadSources.json`) drives all download sources: official `osu!` (cookies, `OsuDownloader`) and `osu mirrors (anonymous)` (`MirrorDownloader`, `RequiresLogin=false`, ships 9 community mirrors). `DownloadSource.Mirrors` (list of `DownloadSourceMirror` with `{0}`-templates) is optional and backward compatible.
+- `OsuDownloadManager.GetDownloadItem` turns the mirror list into `DownloadItem.Candidates` (order = priority); `DownloadManager.TrySwitchMirror` retries a failed item with the next mirror (requeues item + client) before marking it errored; `DownloadItem.Candidates`/`CurrentMirrorIndex` live in `Extensions/Modules/Downloader/Api/DownloadItem.cs`.
+- Mirror order follows osu-collect's default (osu.direct → nerinyan → sayobot → nekoha → beatconnect → osudl → catboy.best → hinamizawa → nzbasic). Users can edit the JSON for custom mirrors.
+- osu!collector import: `Extensions/Modules/API/OsuCollector/OsuCollectorApi.cs` (strict link/ID parsing + `GET https://osucollector.com/api/collections/{id}` + `ToOsuCollection(MapCacher)` — checksums/IDs make maps land in `DownloadableBeatmaps` so the existing download flow works); presenter `App.Shared/Presenters/Forms/OsuCollectorImportFormPresenter.cs`; window `WinForms/Forms/OsuCollectorImportForm.cs`. After-import behavior is a persisted setting `OsuCollectorImportDownloadBehavior` (`Ask`/`Yes`/`No`, see the Settings four-piece set: `Settings.settings`/`Settings.Designer.cs`/`IAppSettingsProvider`/`SettingsProvider`) with values in `Common/Interfaces/Forms/OsuCollectorImportBehaviors`.
+- Adding a new user setting: update all four pieces (Settings.settings XML + generated Designer class + interface + provider) and keep the name in sync.
+
 ## Code style
 
 - File-scoped namespaces for new files; legacy block namespaces survive in old WinForms designer files.

@@ -73,6 +73,15 @@ public class DownloadItem : IDownloadItem
     public object UserToken { get; set; }
     public string Referer { get; set; }
 
+    /// <summary>
+    /// Alternative download URLs (anonymous mirrors) tried in order after failures.
+    /// When set, <see cref="Url"/> is refreshed from the current candidate before each attempt.
+    /// </summary>
+    public IReadOnlyList<DownloadCandidate> Candidates { get; set; }
+
+    /// <summary>Index into <see cref="Candidates"/> of the mirror currently being tried.</summary>
+    public int CurrentMirrorIndex { get; set; }
+
     public void ResetErrorState()
     {
         Error = "";
@@ -81,4 +90,12 @@ public class DownloadItem : IDownloadItem
         FileAlreadyExists = false;
     }
     public override string ToString() => "DLitem: " + Url + " ; " + FileName;
+}
+
+/// <summary>One anonymous mirror URL candidate for a download, with its display name.</summary>
+public class DownloadCandidate
+{
+    public string Name { get; set; }
+    public string Url { get; set; }
+    public string Referer { get; set; }
 }

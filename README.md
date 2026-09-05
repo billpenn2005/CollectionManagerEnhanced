@@ -106,6 +106,23 @@ Go to the top menu, select `Online > Download all missing maps`, select a direct
 
 Download progress can be monitored in the `Download list` window. If closed, this window can be restored by selecting `Online > Show map downloads` from the top menu. The `Progress` column can be expanded using the dividers at the top to check when new downloads will start. Throttled downloads will show this message when the column is not expanded: `Next download slot a...`. This does not mean downloads have failed. They will automatically start again.
 
+### **Anonymous Mirror Downloads** *(added in this fork)*
+
+Besides the official source (which requires your osu! cookies), Collection Manager ships with a **community mirror download source that needs no login**. On a failed download it automatically retries with the next mirror until one works, so throttled or temporarily down mirrors do not interrupt your downloads.
+
+To use it, simply start a download (`Online > Download all missing maps`, or right-click a collection and `Download beatmaps`) and pick **"osu mirrors (anonymous)"** as the download source in the login window — no cookies will be requested. The built-in mirror list (in priority order): osu.direct, Nerinyan, Sayobot, Nekoha, Beatconnect, osu!dl, catboy.best, Hinamizawa, nzbasic.
+
+Downloads are throttled to 3 mapsets per minute / 170 per hour to stay polite to the mirrors. To add, remove or reorder mirrors, edit the `Mirrors` list of the `osu mirrors (anonymous)` entry in `downloadSources.json` (next to the Collection Manager executable). Each mirror entry has a `Name`, a `TemplateUrl` (full version) and a `TemplateUrlNoVideo` (no-video version); `{0}` is replaced with the beatmapset ID. You can also add your own custom mirror provider this way.
+
+### **Importing Collections from osu!collector** *(added in this fork)*
+
+Collections shared on [osucollector.com](https://osucollector.com) can be imported directly into Collection Manager. Go to the top menu, select `File > Import collection from osu!collector...` and paste either the collection link (`https://osucollector.com/collections/<id>`) or the bare numeric ID.
+
+- The collection is fetched from osucollector.com and added to the collection listing with all its beatmaps (real MD5 checksums + beatmap/beatmapset IDs), so its maps are immediately available for the existing download flow.
+- If the collection was already imported, the import is skipped with a notice.
+- After a successful import Collection Manager follows the **"After import"** setting of the import window: ask every time (default), download the missing maps directly, or do nothing. The setting is remembered; if you answer "don't ask again" once, the given answer becomes the permanent setting.
+- `Online > Download all missing maps` then downloads the missing maps without cookies if the anonymous mirror source is selected.
+
 ### **Generating Collections**
 
 Selecting `Online > Generate collection` will bring up the `Collection Generator`.

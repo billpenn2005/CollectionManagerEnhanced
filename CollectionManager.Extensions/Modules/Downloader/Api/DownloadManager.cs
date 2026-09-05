@@ -164,6 +164,13 @@ public abstract class DownloadManager : IDisposable
                 return false;
             }
 
+            if (downloadItem.Candidates is { Count: > 0 } candidates)
+            {
+                int index = Math.Min(downloadItem.CurrentMirrorIndex, candidates.Count - 1);
+                downloadItem.Url = candidates[index].Url;
+                downloadItem.DownloadSlotStatus = $"Downloading from {candidates[index].Name}...";
+            }
+
             downloadCheck[downloadItem.WebClient.ClientId].Reset();
             downloadItem.ResetErrorState();
             downloadCheck[downloadItem.WebClient.ClientId].downloadItem = downloadItem;
@@ -172,6 +179,32 @@ public abstract class DownloadManager : IDisposable
                 GetFullTempLocation(downloadItem.FileName), downloadItem);
             return true;
         }
+    }
+
+    /// <summary>
+    /// Called on a download failure before the item is marked as errored.
+    /// Moves the item to the next mirror candidate (if any) and requeues it.
+    /// Returns true when a retry on an alternative mirror was queued.
+    /// </summary>
+    protected virtual bool TrySwitchMirror(DownloadItem downloadItem)
+    {
+        if (downloadItem.Candidates is not { Count: > 0 } candidates || downloadItem.CurrentMirrorIndex + 1 >= candidates.Count)
+        {
+            return false;
+        }
+
+        downloadItem.CurrentMirrorIndex++;
+        downloadItem.ResetErrorState();
+        downloadItem.DownloadSlotStatus = $"Switching to {candidates[downloadItem.CurrentMirrorIndex].Name}...";
+        lock (_urlsToDownload)
+        {
+            _urlsToDownload.AddFirst(downloadItem);
+        }
+        lock (_lockingObject)
+        {
+            Clients.Enqueue(downloadItem.WebClient);
+        }
+        return true;
     }
 
     internal class FileWorkerArgs
@@ -197,6 +230,11 @@ public abstract class DownloadManager : IDisposable
             }
             else if (e.Error != null)
             {
+                if (TrySwitchMirror(url))
+                {
+                    return;
+                }
+
                 bool handled = false;
                 if (e.Error is WebException ex && ex.Response is HttpWebResponse response)
                 {

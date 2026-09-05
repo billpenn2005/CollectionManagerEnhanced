@@ -104,6 +104,12 @@
             Menu_loadDefaultCollection.Size = new System.Drawing.Size(192, 22);
             Menu_loadDefaultCollection.Text = "Default osu! collection";
             // 
+            // Menu_importOsuCollector
+            // 
+            Menu_importOsuCollector.Name = "Menu_importOsuCollector";
+            Menu_importOsuCollector.Size = new System.Drawing.Size(109, 22);
+            Menu_importOsuCollector.Text = "Import collection from osu!collector...";
+            // 
             // saveToolStripMenuItem
             // 
             saveToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] { Menu_saveAllCollectionsAsDb, Menu_saveAllCollectionsAsOsdb, toolStripSeparator3, Menu_saveOsuCollection, toolStripSeparator2, Menu_collectionsSplit });
@@ -332,6 +338,7 @@
         private System.Windows.Forms.ToolStripMenuItem toolStripMenuItem2;
         private System.Windows.Forms.ToolStripMenuItem Menu_loadCollection;
         private System.Windows.Forms.ToolStripMenuItem Menu_loadDefaultCollection;
+        private System.Windows.Forms.ToolStripMenuItem Menu_importOsuCollector;
         private System.Windows.Forms.ToolStripMenuItem Menu_saveAllCollectionsAsDb;
         private System.Windows.Forms.ToolStripMenuItem Menu_saveAllCollectionsAsOsdb;
         private System.Windows.Forms.ToolStripMenuItem Menu_collectionsSplit;

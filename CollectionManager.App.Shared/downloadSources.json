@@ -12,5 +12,75 @@
     "FullyQualifiedHandlerName": "CollectionManager.Extensions.Modules.Downloader.OsuDownloader, CollectionManager.Extensions",
     "RequiresLogin": true,
     "UseCookiesLogin": true
+  },
+  {
+    "Name": "osu mirrors (anonymous)",
+    "Description": "Community mirrors, no login required. On failure downloads automatically retry with the next mirror. To add or remove mirrors edit the Mirrors list in downloadSources.json.",
+    "Referer": "",
+    "BaseDownloadUrl": "https://mirror.hinamizawa.ai/api/v1/hinai/d/{0}",
+    "ThrottleDownloads": true,
+    "DownloadsPerMinute": 3,
+    "DownloadsPerHour": 170,
+    "DownloadThreads": 3,
+    "RequestTimeout": 10000,
+    "FullyQualifiedHandlerName": "CollectionManager.Extensions.Modules.Downloader.Mirrors.MirrorDownloader, CollectionManager.Extensions",
+    "RequiresLogin": false,
+    "UseCookiesLogin": false,
+    "Mirrors": [
+      {
+        "Name": "osu.direct",
+        "TemplateUrl": "https://osu.direct/d/{0}",
+        "TemplateUrlNoVideo": "https://osu.direct/d/{0}n",
+        "Referer": ""
+      },
+      {
+        "Name": "Nerinyan",
+        "TemplateUrl": "https://api.nerinyan.moe/d/{0}",
+        "TemplateUrlNoVideo": "https://api.nerinyan.moe/d/{0}?nv=1",
+        "Referer": ""
+      },
+      {
+        "Name": "Sayobot",
+        "TemplateUrl": "https://dl.sayobot.cn/beatmaps/download/full/{0}",
+        "TemplateUrlNoVideo": "https://dl.sayobot.cn/beatmaps/download/novideo/{0}",
+        "Referer": ""
+      },
+      {
+        "Name": "Nekoha",
+        "TemplateUrl": "https://mirror.nekoha.moe/api/download/{0}",
+        "TemplateUrlNoVideo": "https://mirror.nekoha.moe/api/download/{0}",
+        "Referer": ""
+      },
+      {
+        "Name": "Beatconnect",
+        "TemplateUrl": "https://beatconnect.io/b/{0}/",
+        "TemplateUrlNoVideo": "https://beatconnect.io/b/{0}/?novideo=1",
+        "Referer": ""
+      },
+      {
+        "Name": "osu!dl",
+        "TemplateUrl": "https://osudl.org/s/{0}",
+        "TemplateUrlNoVideo": "https://osudl.org/s/{0}?video=false",
+        "Referer": ""
+      },
+      {
+        "Name": "catboy.best",
+        "TemplateUrl": "https://catboy.best/d/{0}",
+        "TemplateUrlNoVideo": "https://catboy.best/d/{0}n",
+        "Referer": ""
+      },
+      {
+        "Name": "Hinamizawa",
+        "TemplateUrl": "https://mirror.hinamizawa.ai/api/v1/hinai/d/{0}",
+        "TemplateUrlNoVideo": "https://mirror.hinamizawa.ai/api/v1/hinai/d/{0}?no_video=true",
+        "Referer": ""
+      },
+      {
+        "Name": "nzbasic",
+        "TemplateUrl": "https://direct.nzbasic.com/{0}.osz",
+        "TemplateUrlNoVideo": "https://direct.nzbasic.com/{0}.osz",
+        "Referer": ""
+      }
+    ]
   }
 ]
