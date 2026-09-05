@@ -39,6 +39,8 @@ public class DownloadManagerModel : IDownloadManagerModel
 
     public void SwitchMirrorItems(IEnumerable<DownloadItem> items) => _osuDownloadManager?.SwitchMirrorItems(items);
 
+    public void SwitchItemToMirror(IEnumerable<DownloadItem> items, string mirrorName) => _osuDownloadManager?.SwitchMirrorItems(items, mirrorName);
+
     public void SetDownloadSource(string name) => _osuDownloadManager?.ChangeSelectedDownloadSource(name);
 
     public IReadOnlyList<string> DownloadSourceNames => _osuDownloadManager.GetDownloadSources().Select(s => s.Name).ToList();

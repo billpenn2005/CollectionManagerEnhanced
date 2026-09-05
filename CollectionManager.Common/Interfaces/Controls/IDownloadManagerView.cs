@@ -11,6 +11,7 @@ public interface IDownloadManagerView
     event EventHandler ItemRemoveRequested;
     event EventHandler ItemRetryRequested;
     event EventHandler ItemSwitchMirrorRequested;
+    event EventHandler<DownloadMirrorSelectedEventArgs> ItemMirrorSelected;
     event EventHandler DownloadSourceChanged;
     event EventHandler Disposed;
 

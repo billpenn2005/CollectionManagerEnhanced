@@ -33,6 +33,9 @@ public class CollectionListingModel : ICollectionListingModel
 
     public void EmitCollectionEditing(CollectionEditArgs args) => CollectionEditing?.Invoke(this, args);
 
+    /// <summary>Re-emits the collections changed event so views refresh (e.g. after downloads changed missing states).</summary>
+    public void RefreshCollections() => OnCollectionsChanged();
+
     public OsuCollections GetCollectionsForBeatmaps(Beatmaps beatmaps)
         => _collectionEditor.GetCollectionsForBeatmaps(beatmaps);
 

@@ -29,6 +29,30 @@ public partial class MainFormView : BaseForm, IMainFormView
     public IInfoTextView InfoTextView => infoTextView1;
     public IScoresListingView ScoresListingView => scoresListingView1;
 
+    public void InvokeOnUIThread(Action action)
+    {
+        if (IsDisposed)
+        {
+            return;
+        }
+
+        if (InvokeRequired)
+        {
+            try
+            {
+                BeginInvoke(action);
+            }
+            catch (InvalidOperationException)
+            {
+                // window destroyed mid-update
+            }
+        }
+        else
+        {
+            action();
+        }
+    }
+
     private void Form1_DragEnter(object sender, DragEventArgs e)
     {
         if (e.Data.GetDataPresent(DataFormats.FileDrop) && e.Data.GetFormats().Any(f => f == "FileDrop"))

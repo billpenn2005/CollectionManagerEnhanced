@@ -12,6 +12,8 @@ public interface ICollectionListingModel
     OsuCollections SelectedCollections { get; set; }
 
     void EmitCollectionEditing(CollectionEditArgs args);
+    /// <summary>Re-emits the collections changed event so views refresh (e.g. after downloads changed missing states).</summary>
+    void RefreshCollections();
     OsuCollections GetCollectionsForBeatmaps(Beatmaps beatmaps);
 
 }

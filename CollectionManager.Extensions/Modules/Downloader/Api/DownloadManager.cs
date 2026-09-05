@@ -465,12 +465,58 @@ public abstract class DownloadManager : IDisposable
             return false;
         }
 
-        downloadItem.CurrentMirrorIndex = (downloadItem.CurrentMirrorIndex + 1) % candidates.Count;
+        return SwitchMirror(downloadItem, candidates[(downloadItem.CurrentMirrorIndex + 1) % candidates.Count].Name);
+    }
+
+    /// <summary>
+    /// Manually switches an item to the mirror with the given name. Works in every state:
+    /// queued, paused, errored or currently downloading (the in-flight request is aborted and
+    /// the item restarts on the selected mirror). Paused items stay paused and use the new
+    /// mirror when resumed. Returns false when the mirror name is unknown or already selected.
+    /// </summary>
+    public bool SwitchMirror(DownloadItem downloadItem, string mirrorName)
+    {
+        if (downloadItem.Candidates is not { Count: > 0 } candidates)
+        {
+            return false;
+        }
+
+        int newIndex = -1;
+        for (int i = 0; i < candidates.Count; i++)
+        {
+            if (string.Equals(candidates[i].Name, mirrorName, StringComparison.OrdinalIgnoreCase))
+            {
+                newIndex = i;
+                break;
+            }
+        }
+
+        if (newIndex < 0 || newIndex == downloadItem.CurrentMirrorIndex)
+        {
+            return false;
+        }
+
+        bool wasDownloading = downloadItem.IsDownloading;
+        downloadItem.CurrentMirrorIndex = newIndex;
         downloadItem.ResetTransferState(); // different mirror -> start over
-        downloadItem.DownloadSlotStatus = $"Switching to {candidates[downloadItem.CurrentMirrorIndex].Name}...";
+        downloadItem.PendingMirrorRestart = true;
+        downloadItem.DownloadSlotStatus = $"Switching to {mirrorName}...";
+        if (wasDownloading)
+        {
+            AbortActiveRequest(downloadItem); // the cancelled copy loop restarts on the new mirror
+        }
+
+        if (downloadItem.IsPaused || downloadItem.Removed)
+        {
+            return true; // stays paused/removed; the new mirror is used on resume
+        }
+
         lock (_urlsToDownload)
         {
-            _urlsToDownload.AddLast(downloadItem);
+            if (!_urlsToDownload.Contains(downloadItem))
+            {
+                _urlsToDownload.AddFirst(downloadItem);
+            }
         }
         return true;
     }
@@ -515,8 +561,25 @@ public abstract class DownloadManager : IDisposable
                 // Progress is remembered so the next attempt resumes from the byte offset
                 // (the actual temp file size, which is what the server can resume from).
                 string tempFileLocation = GetFullTempLocation(url.FileName);
-                url.ResumeOffset = File.Exists(tempFileLocation) ? new FileInfo(tempFileLocation).Length : 0;
-                if (url.Removed)
+                if (url.PendingMirrorRestart)
+                {
+                    // user picked a specific mirror: restart from scratch on it
+                    url.PendingMirrorRestart = false;
+                    url.ResumeOffset = 0;
+                    url.DownloadAborted = false;
+                    FileOperations.Enqueue(new FileWorkerArgs { action = "removeTemp", orginalLocation = tempFileLocation });
+                    if (!url.Removed && !url.IsPaused)
+                    {
+                        lock (_urlsToDownload)
+                        {
+                            if (!_urlsToDownload.Contains(url))
+                            {
+                                _urlsToDownload.AddFirst(url);
+                            }
+                        }
+                    }
+                }
+                else if (url.Removed)
                 {
                     url.DownloadAborted = true;
                     error = true; // remove temp on the next watcher tick
@@ -525,11 +588,13 @@ public abstract class DownloadManager : IDisposable
                 {
                     // individually paused: stays out of the queue until ResumeItem()
                     url.DownloadAborted = false;
+                    url.ResumeOffset = File.Exists(tempFileLocation) ? new FileInfo(tempFileLocation).Length : 0;
                 }
                 else
                 {
                     // global stop / stall / source switch: stays queued and restarts when resumed
                     url.DownloadAborted = false;
+                    url.ResumeOffset = File.Exists(tempFileLocation) ? new FileInfo(tempFileLocation).Length : 0;
                     lock (_urlsToDownload)
                     {
                         _ = _urlsToDownload.AddFirst(url);
@@ -599,6 +664,7 @@ public abstract class DownloadManager : IDisposable
             }
             else if (success)
             {
+                url.PendingMirrorRestart = false; // switch raced with a completed download: completion wins
                 url.DownloadSlotStatus = null;
                 string tempFileLocation = GetFullTempLocation(url.FileName);
                 string fileLocation = GetFullLocation(url.FileName);

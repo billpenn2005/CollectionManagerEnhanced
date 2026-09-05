@@ -47,6 +47,7 @@ namespace GuiComponents.Controls
             toolStripSeparator1 = new System.Windows.Forms.ToolStripSeparator();
             menuItem_retry = new System.Windows.Forms.ToolStripMenuItem();
             menuItem_switchMirror = new System.Windows.Forms.ToolStripMenuItem();
+            menuItem_mirror = new System.Windows.Forms.ToolStripMenuItem();
             ((System.ComponentModel.ISupportInitialize)ListViewDownload).BeginInit();
             contextMenuStrip_downloads.SuspendLayout();
             SuspendLayout();
@@ -152,7 +153,7 @@ namespace GuiComponents.Controls
             // 
             // contextMenuStrip_downloads
             // 
-            contextMenuStrip_downloads.Items.AddRange(new System.Windows.Forms.ToolStripItem[] { menuItem_pause, menuItem_resume, menuItem_remove, toolStripSeparator1, menuItem_retry, menuItem_switchMirror });
+            contextMenuStrip_downloads.Items.AddRange(new System.Windows.Forms.ToolStripItem[] { menuItem_pause, menuItem_resume, menuItem_remove, toolStripSeparator1, menuItem_retry, menuItem_switchMirror, menuItem_mirror });
             contextMenuStrip_downloads.Name = "contextMenuStrip_downloads";
             contextMenuStrip_downloads.Size = new System.Drawing.Size(171, 104);
             // 
@@ -190,6 +191,12 @@ namespace GuiComponents.Controls
             menuItem_switchMirror.Name = "menuItem_switchMirror";
             menuItem_switchMirror.Size = new System.Drawing.Size(170, 22);
             menuItem_switchMirror.Text = "Switch mirror";
+            // 
+            // menuItem_mirror
+            // 
+            menuItem_mirror.Name = "menuItem_mirror";
+            menuItem_mirror.Size = new System.Drawing.Size(170, 22);
+            menuItem_mirror.Text = "Mirror";
             // 
             // DownloadManagerView
             // 
@@ -230,5 +237,6 @@ namespace GuiComponents.Controls
         private System.Windows.Forms.ToolStripSeparator toolStripSeparator1;
         private System.Windows.Forms.ToolStripMenuItem menuItem_retry;
         private System.Windows.Forms.ToolStripMenuItem menuItem_switchMirror;
+        private System.Windows.Forms.ToolStripMenuItem menuItem_mirror;
     }
 }

@@ -149,6 +149,17 @@ public sealed class OsuDownloadManager
     public event EventHandler DownloadItemsChanged;
     public event EventHandler<DownloadItem> DownloadItemUpdated;
 
+    /// <summary>Raised when a download completes and its final .osz file is in place.</summary>
+    public event EventHandler DownloadFinished;
+    private readonly HashSet<long> _downloadFinishedNotified = [];
+    /// <summary>Re-checks completed downloads until their final file is in place (moveTemp runs on the downloader's 5s watcher).</summary>
+    private readonly System.Threading.Timer _downloadFinishedWatcher;
+
+    public OsuDownloadManager()
+    {
+        _downloadFinishedWatcher = new System.Threading.Timer(_ => NotifyDownloadFinishedIfNeeded());
+    }
+
     public bool IsLoggedIn { get; private set; }
     public string DownloadDirectory { get; set; } = string.Empty;
     public bool DownloadDirectoryIsSet => !string.IsNullOrEmpty(DownloadDirectory);
@@ -353,6 +364,17 @@ public sealed class OsuDownloadManager
         DownloadItemsChanged?.Invoke(this, EventArgs.Empty);
     }
 
+    /// <summary>Switches items to a specific mirror by name (works while queued, paused, errored or downloading).</summary>
+    public void SwitchMirrorItems(IEnumerable<DownloadItem> items, string mirrorName)
+    {
+        foreach (DownloadItem item in items)
+        {
+            _mapDownloader?.SwitchMirror(item, mirrorName);
+        }
+
+        DownloadItemsChanged?.Invoke(this, EventArgs.Empty);
+    }
+
     private void MapDownloaderOnProgressUpdated(object sender, DownloadProgressChangedEventArgs downloadProgressChangedEventArgs)
     {
         long now = Environment.TickCount64;
@@ -364,6 +386,27 @@ public sealed class OsuDownloadManager
         _lastProgressUpdateTick = now;
         DownloadItem item = (DownloadItem)downloadProgressChangedEventArgs.UserState;
         DownloadItemUpdated?.Invoke(this, item);
+        NotifyDownloadFinishedIfNeeded();
+    }
+
+    /// <summary>Raises <see cref="DownloadFinished"/> for completed items whose final file is in place.</summary>
+    private void NotifyDownloadFinishedIfNeeded()
+    {
+        foreach (DownloadItem item in DownloadItems.OfType<DownloadItem>())
+        {
+            if (item.Removed || item.IsPaused || _downloadFinishedNotified.Contains(item.Id) || !item.IsCompleted)
+            {
+                continue;
+            }
+
+            if (string.IsNullOrEmpty(DownloadDirectory) || !File.Exists(Path.Combine(DownloadDirectory, item.FileName)))
+            {
+                continue; // final .osz not moved into place yet
+            }
+
+            _downloadFinishedNotified.Add(item.Id);
+            DownloadFinished?.Invoke(this, EventArgs.Empty);
+        }
     }
 
     internal void DownloadBeatmaps(Beatmaps selectedBeatmaps)
@@ -405,6 +448,8 @@ public sealed class OsuDownloadManager
 
         if (fireUpdateEvent)
         {
+            // start watching for completed downloads (final file placement + refresh notification)
+            _downloadFinishedWatcher.Change(2000, 5000);
             DownloadItemsChanged?.Invoke(this, EventArgs.Empty);
         }
     }

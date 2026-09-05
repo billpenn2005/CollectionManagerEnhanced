@@ -26,6 +26,7 @@ public partial class DownloadManagerView : UserControl, IDownloadManagerView
         menuItem_remove.Click += (_, _) => ItemRemoveRequested?.Invoke(this, EventArgs.Empty);
         menuItem_retry.Click += (_, _) => ItemRetryRequested?.Invoke(this, EventArgs.Empty);
         menuItem_switchMirror.Click += (_, _) => ItemSwitchMirrorRequested?.Invoke(this, EventArgs.Empty);
+        menuItem_mirror.DropDownOpening += MirrorMenu_DropDownOpening;
     }
 
     public event EventHandler DownloadToggleClick;
@@ -34,6 +35,7 @@ public partial class DownloadManagerView : UserControl, IDownloadManagerView
     public event EventHandler ItemRemoveRequested;
     public event EventHandler ItemRetryRequested;
     public event EventHandler ItemSwitchMirrorRequested;
+    public event EventHandler<DownloadMirrorSelectedEventArgs> ItemMirrorSelected;
     public event EventHandler DownloadSourceChanged;
 
     public bool DownloadButtonIsEnabled
@@ -67,7 +69,32 @@ public partial class DownloadManagerView : UserControl, IDownloadManagerView
         menuItem_resume.Enabled = any && selected.Any(i => i.IsPaused);
         menuItem_remove.Enabled = any;
         menuItem_retry.Enabled = any && selected.Any(i => !i.IsPaused && (i.OtherError || i.DownloadAborted));
-        menuItem_switchMirror.Enabled = any && !anyCompleted && selected.Any(i => i.Candidates is { Count: > 0 }) && selected.All(i => i.WebClient?.IsBusy != true && !i.IsPaused);
+        bool hasMirrors = any && !anyCompleted && selected.Any(i => i.Candidates is { Count: > 0 });
+        menuItem_switchMirror.Enabled = hasMirrors && !selected.Any(i => i.IsDownloading);
+        menuItem_mirror.Enabled = hasMirrors;
+    }
+
+    /// <summary>Rebuilds the Mirror submenu: one entry per candidate, current mirror checked. Works for paused items too.</summary>
+    private void MirrorMenu_DropDownOpening(object sender, EventArgs e)
+    {
+        menuItem_mirror.DropDownItems.Clear();
+
+        DownloadItem item = ListViewDownload.SelectedObjects.Cast<DownloadItem>().FirstOrDefault(i => !i.Removed && !i.IsCompleted && i.Candidates is { Count: > 0 });
+        if (item is null)
+        {
+            return;
+        }
+
+        foreach (DownloadCandidate candidate in item.Candidates)
+        {
+            ToolStripMenuItem mirrorItem = new(candidate.Name)
+            {
+                Checked = string.Equals(candidate.Name, item.CurrentMirrorName, StringComparison.OrdinalIgnoreCase),
+                CheckOnClick = false
+            };
+            mirrorItem.Click += (_, _) => ItemMirrorSelected?.Invoke(this, new DownloadMirrorSelectedEventArgs(candidate.Name));
+            menuItem_mirror.DropDownItems.Add(mirrorItem);
+        }
     }
 
     private void SafeInvoke(MethodInvoker action)

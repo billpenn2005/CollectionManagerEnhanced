@@ -99,6 +99,13 @@ public class DownloadItem : IDownloadItem
     /// <summary>True when the item was removed by the user; it will never download again.</summary>
     public bool Removed { get; set; }
 
+    /// <summary>
+    /// Set when the user picked a specific mirror while a download was in flight.
+    /// The cancelled download then restarts from scratch on the already-selected mirror
+    /// (no resume offset, old temp file removed) instead of keeping the old partial file.
+    /// </summary>
+    public bool PendingMirrorRestart { get; set; }
+
     /// <summary>Current download speed in bytes per second (0 when not downloading).</summary>
     public double DownloadSpeed { get; set; }
 
